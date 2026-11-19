@@ -1,10 +1,14 @@
+
 package ru.derzhus.app
 
 import android.content.Context
+import android.content.Intent
+
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.clickable
@@ -27,15 +31,28 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 
 class DerzhusWidget : GlanceAppWidget() {
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
+
+    override suspend fun provideGlance(
+        context: Context,
+        id: GlanceId
+    ) {
         val habit = Store.load(context).firstOrNull()
         val now = System.currentTimeMillis()
-        provideContent { WidgetContent(habit, now) }
+
+        provideContent {
+            WidgetContent(
+                context = context,
+                habit = habit,
+                now = now
+            )
+        }
     }
 }
 
 class DerzhusWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = DerzhusWidget()
+
+    override val glanceAppWidget: GlanceAppWidget =
+        DerzhusWidget()
 }
 
 private val WBg = ColorProvider(Color(0xFF0E1513))
@@ -44,32 +61,108 @@ private val WText = ColorProvider(Color(0xFFE6F2EF))
 private val WMuted = ColorProvider(Color(0xFF8AA39C))
 
 @Composable
-private fun WidgetContent(h: Habit?, now: Long) {
+private fun WidgetContent(
+    context: Context,
+    habit: Habit?,
+    now: Long
+) {
+
+    val openAppIntent = Intent(
+        context,
+        MainActivity::class.java
+    ).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(WBg)
             .cornerRadius(24.dp)
             .padding(14.dp)
-            .clickable(actionStartActivity<MainActivity>()),
+            .clickable(
+                actionStartActivity(
+                    intent = openAppIntent
+                )
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (h == null) {
-            Text("Держусь", style = TextStyle(color = WAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold))
-            Text("Открой приложение и добавь первую цель", style = TextStyle(color = WMuted, fontSize = 13.sp))
+
+        if (habit == null) {
+
+            Text(
+                text = "Держусь",
+                style = TextStyle(
+                    color = WAccent,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+
+            Text(
+                text = "Открой приложение и добавь первую цель",
+                style = TextStyle(
+                    color = WMuted,
+                    fontSize = 13.sp
+                )
+            )
+
         } else {
-            val d = Calc.fullDays(h, now)
-            Text(h.title, style = TextStyle(color = WMuted, fontSize = 13.sp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text("$d", style = TextStyle(color = WAccent, fontSize = 44.sp, fontWeight = FontWeight.Bold))
-                Spacer(GlanceModifier.width(6.dp))
-                Text(Calc.dayWord(d), style = TextStyle(color = WText, fontSize = 16.sp))
+
+            val days = Calc.fullDays(habit, now)
+
+            Text(
+                text = habit.title,
+                style = TextStyle(
+                    color = WMuted,
+                    fontSize = 13.sp
+                )
+            )
+
+            Row(
+                verticalAlignment = Alignment.Bottom
+            ) {
+
+                Text(
+                    text = "$days",
+                    style = TextStyle(
+                        color = WAccent,
+                        fontSize = 44.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+
+                Spacer(
+                    modifier = GlanceModifier.width(6.dp)
+                )
+
+                Text(
+                    text = Calc.dayWord(days),
+                    style = TextStyle(
+                        color = WText,
+                        fontSize = 16.sp
+                    )
+                )
             }
-            val line = if (h.pricePerUnit > 0)
-                "Сэкономлено ${Calc.money(Calc.saved(h, now))}"
-            else
-                "Обошёлся без ${Calc.count(Calc.avoided(h, now))} ${h.unitLabel}"
-            Text(line, style = TextStyle(color = WText, fontSize = 14.sp))
+
+            val line = if (habit.pricePerUnit > 0) {
+                "Сэкономлено ${
+                    Calc.money(Calc.saved(habit, now))
+                }"
+            } else {
+                "Обошёлся без ${
+                    Calc.count(Calc.avoided(habit, now))
+                } ${habit.unitLabel}"
+            }
+
+            Text(
+                text = line,
+                style = TextStyle(
+                    color = WText,
+                    fontSize = 14.sp
+                )
+            )
         }
     }
 }
