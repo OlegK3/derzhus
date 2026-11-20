@@ -47,6 +47,18 @@ object Praise {
 
     fun support(step: Int): String = support[step.mod(support.size)]
 
+    private val tags = listOf(
+        "Ты на верном пути!",
+        "Так держать!",
+        "Каждый день — твоя победа",
+        "Ты сильнее, чем кажется",
+        "Это уже результат!"
+    )
+
+    /** Короткая подпись под кольцом дней. */
+    fun tag(h: Habit, now: Long): String =
+        tags[(Calc.fullDays(h, now) + h.id.hashCode()).mod(tags.size)]
+
     fun relapse(bestDays: Long): String =
         if (bestDays > 0)
             "Это не конец. Срыв случается почти у каждого, а твой рекорд ($bestDays ${Calc.dayWord(bestDays)}) сохранится. Начнём новую серию?"

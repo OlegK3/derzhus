@@ -1,46 +1,125 @@
 package ru.derzhus.app
 
-import android.content.Context
-import org.json.JSONArray
-import org.json.JSONObject
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.Locale
 import kotlin.math.max
+import kotlin.math.min
 
-/** Одна отслеживаемая привычка: «Без сигарет», «Без алкоголя» и т.д. */
+/** Привычка: «Без сигарет», «Без алкоголя»… */
 data class Habit(
     val id: String,
     val name: String,          // в родительном падеже: «сигарет» -> «Без сигарет»
     val unitLabel: String,     // «сигарет», «порций», «часов»
     val unitsPerDay: Double,   // сколько было в день
     val pricePerUnit: Double,  // цена одной единицы, ₽ (0 — деньги не считаем)
-    val startMillis: Long,     // начало серии
-    val bestMillis: Long = 0L, // рекорд (самая длинная серия), мс
-    val seen: Set<String> = emptySet() // награды, о которых уже поздравили
+    val startMillis: Long,     // начало текущей серии
+    val bestMillis: Long = 0L  // рекорд (самая длинная серия), мс
 ) {
     val title: String get() = "Без $name"
+
+    /** Расчётная экономия за сутки, в копейках. */
+    val perDayKop: Long
+        get() = BigDecimal.valueOf(unitsPerDay)
+            .multiply(BigDecimal.valueOf(pricePerUnit))
+            .multiply(BigDecimal(100))
+            .setScale(0, RoundingMode.HALF_UP)
+            .toLong()
 }
 
-data class Level(val name: String, val fromDays: Long)
+/** Запись в истории накоплений цели. */
+data class Deposit(
+    val id: String,
+    val ts: Long,
+    val amountKop: Long,   // пополнение > 0, корректировка может быть < 0
+    val kind: String,      // deposit | adjust | initial
+    val comment: String
+)
+
+/** Финансовая цель («мечта»). */
+data class Goal(
+    val id: String,
+    val title: String,
+    val costKop: Long,
+    val photos: List<String>,     // имена файлов в filesDir/photos
+    val createdAt: Long,
+    val isMain: Boolean,
+    val achievedAt: Long?,
+    val history: List<Deposit>,
+    val note: String = ""
+) {
+    /** Фактически накоплено = сумма истории. Не путать с расчётной экономией привычки. */
+    val savedKop: Long get() = max(0L, history.sumOf { it.amountKop })
+    val remainingKop: Long get() = max(0L, costKop - savedKop)
+    val achieved: Boolean get() = costKop > 0 && savedKop >= costKop
+    val percent: Int
+        get() = if (costKop <= 0) 0 else min(100L, savedKop * 100 / costKop).toInt()
+    val progress: Float
+        get() = if (costKop <= 0) 0f else (savedKop.toDouble() / costKop).toFloat().coerceIn(0f, 1f)
+}
+
+data class Settings(
+    val userName: String = "Мой путь",
+    val avatar: String? = null,
+    val mainHabitId: String? = null,
+    val paceMode: String = "estimate",   // estimate | custom | off
+    val customPaceKop: Long = 0L,
+    val remindersOn: Boolean = true,
+    val reminderHour: Int = 9,
+    val interests: Set<String> = emptySet()
+)
+
+data class AppData(
+    val habits: List<Habit> = emptyList(),
+    val goals: List<Goal> = emptyList(),
+    val settings: Settings = Settings(),
+    val unlocked: Map<String, Long> = emptyMap(),   // id награды -> когда открыта (навсегда)
+    val celebrated: Set<String> = emptySet()        // о каких наградах уже поздравили
+) {
+    val mainHabit: Habit?
+        get() = habits.firstOrNull { it.id == settings.mainHabitId } ?: habits.firstOrNull()
+
+    val mainGoal: Goal?
+        get() = goals.firstOrNull { it.isMain }
+            ?: goals.firstOrNull { !it.achieved }
+            ?: goals.firstOrNull()
+
+    val totalSavedKop: Long get() = goals.sumOf { it.savedKop }
+}
 
 object Calc {
     const val DAY = 86_400_000L
     private val ru: Locale = Locale.forLanguageTag("ru-RU")
 
-    val levels = listOf(
-        Level("Новичок", 0),
-        Level("Стойкий", 7),
-        Level("Упорный", 30),
-        Level("Железный", 100),
-        Level("Легенда", 365)
-    )
-
     fun elapsed(h: Habit, now: Long): Long = max(0L, now - h.startMillis)
     fun days(h: Habit, now: Long): Double = elapsed(h, now) / DAY.toDouble()
     fun fullDays(h: Habit, now: Long): Long = elapsed(h, now) / DAY
-    fun saved(h: Habit, now: Long): Double = days(h, now) * h.unitsPerDay * h.pricePerUnit
+    fun recordMs(h: Habit, now: Long): Long = max(h.bestMillis, elapsed(h, now))
+    fun recordDays(h: Habit, now: Long): Long = recordMs(h, now) / DAY
+
+    /** Расчётная экономия в копейках: целочисленно, без накопления ошибок. */
+    fun savedKop(h: Habit, now: Long): Long {
+        val e = elapsed(h, now)
+        val perDay = h.perDayKop
+        return (e / DAY) * perDay + (e % DAY) * perDay / DAY
+    }
+
     fun avoided(h: Habit, now: Long): Double = days(h, now) * h.unitsPerDay
 
-    fun level(fullDays: Long): Level = levels.last { fullDays >= it.fromDays }
+    fun ceilDiv(a: Long, b: Long): Long = (a + b - 1) / b
+
+    /** Темп накоплений (коп./день) по выбранной модели. null — темп неизвестен, прогноз не показываем. */
+    fun paceKop(d: AppData): Long? = when (d.settings.paceMode) {
+        "estimate" -> d.mainHabit?.perDayKop?.takeIf { it > 0 }
+        "custom" -> d.settings.customPaceKop.takeIf { it > 0 }
+        else -> null
+    }
+
+    fun daysToGoal(goal: Goal, paceKop: Long?): Long? = when {
+        goal.achieved -> 0L
+        paceKop == null || paceKop <= 0 -> null
+        else -> ceilDiv(goal.remainingKop, paceKop)
+    }
 
     fun plural(n: Long, one: String, few: String, many: String): String {
         val m10 = n % 10
@@ -53,14 +132,11 @@ object Calc {
     }
 
     fun dayWord(n: Long) = plural(n, "день", "дня", "дней")
-
     fun daysText(n: Long) = "$n ${dayWord(n)}"
-
-    fun money(v: Double): String = String.format(ru, "%,.0f ₽", v)
 
     fun count(v: Double): String = String.format(ru, "%,.0f", v)
 
-    /** «3 дня 4 ч 12 мин» (с секундами, если withSeconds). */
+    /** «3 дня 4 ч 12 мин» (с секундами, если withSeconds и нет полных суток). */
     fun duration(ms: Long, withSeconds: Boolean = false): String {
         val d = ms / DAY
         val h = ms / 3_600_000 % 24
@@ -72,53 +148,5 @@ object Calc {
         parts += "$m мин"
         if (withSeconds && d == 0L) parts += "$s с"
         return parts.joinToString(" ")
-    }
-}
-
-object Store {
-    private const val PREFS = "derzhus"
-    private const val KEY = "habits"
-
-    fun load(ctx: Context): List<Habit> {
-        val raw = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
-            ?: return emptyList()
-        return try {
-            val arr = JSONArray(raw)
-            (0 until arr.length()).map { i ->
-                val o = arr.getJSONObject(i)
-                val seenArr = o.optJSONArray("seen")
-                Habit(
-                    id = o.getString("id"),
-                    name = o.getString("name"),
-                    unitLabel = o.getString("unitLabel"),
-                    unitsPerDay = o.getDouble("unitsPerDay"),
-                    pricePerUnit = o.getDouble("pricePerUnit"),
-                    startMillis = o.getLong("startMillis"),
-                    bestMillis = o.optLong("bestMillis", 0L),
-                    seen = if (seenArr == null) emptySet()
-                    else (0 until seenArr.length()).map { seenArr.getString(it) }.toSet()
-                )
-            }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    fun save(ctx: Context, list: List<Habit>) {
-        val arr = JSONArray()
-        list.forEach { h ->
-            arr.put(
-                JSONObject()
-                    .put("id", h.id)
-                    .put("name", h.name)
-                    .put("unitLabel", h.unitLabel)
-                    .put("unitsPerDay", h.unitsPerDay)
-                    .put("pricePerUnit", h.pricePerUnit)
-                    .put("startMillis", h.startMillis)
-                    .put("bestMillis", h.bestMillis)
-                    .put("seen", JSONArray(h.seen.toList()))
-            )
-        }
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, arr.toString()).apply()
     }
 }

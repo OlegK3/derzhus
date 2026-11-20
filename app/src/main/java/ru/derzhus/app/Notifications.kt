@@ -55,11 +55,16 @@ object Notifier {
 }
 
 object Scheduler {
-    /** Раз в сутки в 9:00 по местному времени. */
-    fun schedule(ctx: Context) {
+    /** Раз в сутки в выбранный час (по местному времени); выключается в настройках. */
+    fun apply(ctx: Context, s: Settings) {
+        val wm = WorkManager.getInstance(ctx)
+        if (!s.remindersOn) {
+            wm.cancelUniqueWork("morning")
+            return
+        }
         val now = System.currentTimeMillis()
         val next = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 9)
+            set(Calendar.HOUR_OF_DAY, s.reminderHour)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
@@ -68,8 +73,7 @@ object Scheduler {
         val req = PeriodicWorkRequestBuilder<MorningWorker>(24, TimeUnit.HOURS)
             .setInitialDelay(next.timeInMillis - now, TimeUnit.MILLISECONDS)
             .build()
-        WorkManager.getInstance(ctx)
-            .enqueueUniquePeriodicWork("morning", ExistingPeriodicWorkPolicy.KEEP, req)
+        wm.enqueueUniquePeriodicWork("morning", ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE, req)
     }
 }
 
@@ -83,9 +87,9 @@ class MorningWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
             val d = Calc.fullDays(h, now)
             val title = if (d == 0L) "${h.title}: первый день" else "${h.title}: ${Calc.daysText(d)}"
             // Награда, которую получили именно сегодня
-            val fresh = Awards.dayGoals.firstOrNull { it.threshold == d.toDouble() && d > 0 }
+            val fresh = Game.dayAwards.firstOrNull { it.threshold == d && d > 0 }
             val praise = Praise.daily(h, now)
-            val text = if (fresh != null) "Новая награда: ${fresh.emoji} ${fresh.title}. $praise" else praise
+            val text = if (fresh != null) "Новая награда: ${fresh.icon} ${fresh.title}. $praise" else praise
             Notifier.post(ctx, index + 1, title, text)
         }
 

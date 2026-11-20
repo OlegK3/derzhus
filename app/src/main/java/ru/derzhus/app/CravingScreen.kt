@@ -4,17 +4,14 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,7 +29,7 @@ import androidx.compose.ui.unit.sp
 
 private const val CYCLES = 5
 
-/** Дыхание 4 секунды вдох, 6 секунд выдох, 5 раз (около 50 секунд). */
+/** Помощь при тяге: дыхание 4 секунды вдох, 6 секунд выдох, 5 раз (около 50 секунд). */
 @Composable
 fun CravingScreen(habit: Habit, now: Long, onClose: () -> Unit) {
     val scale = remember { Animatable(0.55f) }
@@ -58,7 +55,7 @@ fun CravingScreen(habit: Habit, now: Long, onClose: () -> Unit) {
         Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Тянет — это нормально", color = Accent, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("Тянет — это нормально", color = TextMain, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text(
             "Дыши вместе с кругом. Обычно тяга стихает за несколько минут.",
             color = Muted, fontSize = 15.sp, textAlign = TextAlign.Center,
@@ -79,9 +76,9 @@ fun CravingScreen(habit: Habit, now: Long, onClose: () -> Unit) {
             else Praise.support(cycle),
             color = TextMain, fontSize = 17.sp, textAlign = TextAlign.Center, lineHeight = 24.sp
         )
-        if (habit.pricePerUnit > 0) {
+        if (habit.perDayKop > 0) {
             Text(
-                "Уже сэкономлено ${Calc.money(Calc.saved(habit, now))}",
+                "Уже сэкономлено ${Money.rub(Calc.savedKop(habit, now))}",
                 color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)
             )
         }
@@ -90,8 +87,8 @@ fun CravingScreen(habit: Habit, now: Long, onClose: () -> Unit) {
             Modifier.padding(top = 20.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            OutlinedButton(onClick = { run++ }, modifier = Modifier.weight(1f).height(52.dp)) { Text("Ещё раз") }
-            Button(onClick = onClose, modifier = Modifier.weight(1f).height(52.dp)) { Text("Мне лучше") }
+            GhostButton("Ещё раз", onClick = { run++ }, modifier = Modifier.weight(1f))
+            PrimaryButton("Мне лучше", onClick = onClose, modifier = Modifier.weight(1f))
         }
     }
 }

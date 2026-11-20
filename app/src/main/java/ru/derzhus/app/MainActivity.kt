@@ -12,8 +12,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,21 +25,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
-import androidx.glance.appwidget.updateAll
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-
-sealed interface Screen {
-    data object Home : Screen
-    data object Add : Screen
-    data object Craving : Screen
-    data object AwardList : Screen
-}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,44 +42,49 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT)
         )
         Notifier.ensureChannel(this)
-        Scheduler.schedule(this)
         setContent {
             DerzhusTheme {
-                Surface(color = Bg, modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-                    App()
+                Surface(color = Bg, modifier = Modifier.fillMaxSize()) {
+                    AppRoot()
                 }
             }
         }
     }
 }
 
+/**
+ * Дополнительные экраны поверх вкладок кодируются строкой, чтобы пережить поворот экрана:
+ * "" — нет, "goal:<id>", "edit:<id>" (пустой id — новая цель), "habit", "craving", "rules".
+ */
 @Composable
-fun App() {
+fun AppRoot(vm: MainVm = viewModel()) {
     val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val data = vm.data
 
-    var habits by remember { mutableStateOf(Store.load(ctx)) }
-    var selectedId by remember { mutableStateOf(habits.firstOrNull()?.id) }
-    var screen by remember { mutableStateOf<Screen>(if (habits.isEmpty()) Screen.Add else Screen.Home) }
+    var tab by rememberSaveable { mutableStateOf(MainTab.Home) }
+    var overlay by rememberSaveable { mutableStateOf("") }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
+    // Секундомер на главном экране + смена календарного дня для наград и виджета
     LaunchedEffect(Unit) {
+        var ticks = 0
         while (true) {
             now = System.currentTimeMillis()
+            if (ticks % 30 == 0) vm.sync()
+            ticks++
             delay(1000)
         }
     }
 
-    fun commit(list: List<Habit>) {
-        habits = list
-        Store.save(ctx, list)
-        scope.launch { DerzhusWidget().updateAll(ctx) }
+    // Напоминания: расписание следует настройкам
+    LaunchedEffect(data.settings.remindersOn, data.settings.reminderHour) {
+        Scheduler.apply(ctx, data.settings)
     }
 
-    // Разрешение на уведомления (Android 13+), спрашиваем после первой привычки
+    // Разрешение на уведомления (Android 13+)
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    LaunchedEffect(habits.isNotEmpty()) {
-        if (habits.isNotEmpty() && Build.VERSION.SDK_INT >= 33 &&
+    LaunchedEffect(data.habits.isNotEmpty()) {
+        if (data.habits.isNotEmpty() && Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) {
@@ -90,40 +92,107 @@ fun App() {
         }
     }
 
-    BackHandler(enabled = screen != Screen.Home && habits.isNotEmpty()) { screen = Screen.Home }
+    BackHandler(enabled = overlay.isNotEmpty()) { overlay = "" }
+    BackHandler(enabled = overlay.isEmpty() && tab != MainTab.Home) { tab = MainTab.Home }
 
-    val habit = habits.firstOrNull { it.id == selectedId } ?: habits.firstOrNull()
-
-    when (screen) {
-        Screen.Add -> AddScreen(
-            canCancel = habits.isNotEmpty(),
-            onCancel = { screen = Screen.Home },
-            onSave = { h ->
-                commit(habits + h)
-                selectedId = h.id
-                screen = Screen.Home
+    Box(Modifier.fillMaxSize()) {
+        when {
+            // Первый запуск: сначала создаём привычку
+            data.habits.isEmpty() -> Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                AddHabitScreen(canCancel = false, onCancel = {}, onSave = { vm.addHabit(it) })
             }
-        )
 
-        Screen.Home -> if (habit != null) HomeScreen(
-            habits = habits,
-            habit = habit,
-            now = now,
-            onSelect = { selectedId = it },
-            onAdd = { screen = Screen.Add },
-            onCraving = { screen = Screen.Craving },
-            onAwards = { screen = Screen.AwardList },
-            onUpdate = { upd -> commit(habits.map { if (it.id == upd.id) upd else it }) },
-            onDelete = { del ->
-                val rest = habits.filter { it.id != del.id }
-                commit(rest)
-                selectedId = rest.firstOrNull()?.id
-                if (rest.isEmpty()) screen = Screen.Add
+            overlay.isNotEmpty() -> Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                Overlay(vm, now, overlay) { overlay = it }
             }
-        )
 
-        Screen.Craving -> if (habit != null) CravingScreen(habit, now) { screen = Screen.Home }
+            else -> Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f).statusBarsPadding()) {
+                    when (tab) {
+                        MainTab.Home -> HomeScreen(
+                            data = data,
+                            now = now,
+                            onSelectHabit = { vm.setMainHabit(it) },
+                            onAddHabit = { overlay = "habit" },
+                            onOpenGoal = { overlay = "goal:$it" },
+                            onAddGoal = { overlay = "edit:" },
+                            onCraving = { overlay = "craving" },
+                            onRules = { overlay = "rules" },
+                            onRelapse = { vm.relapse(it.id) },
+                            onOpenAwards = { tab = MainTab.Awards },
+                            onOpenGoals = { tab = MainTab.Goals }
+                        )
 
-        Screen.AwardList -> if (habit != null) AwardsScreen(habit, now) { screen = Screen.Home }
+                        MainTab.Goals -> GoalsScreen(
+                            data = data,
+                            onOpen = { overlay = "goal:$it" },
+                            onAdd = { overlay = "edit:" },
+                            onEdit = { overlay = "edit:$it" },
+                            onDelete = { vm.deleteGoal(it) },
+                            onMakeMain = { vm.makeMainGoal(it) }
+                        )
+
+                        MainTab.Hobbies -> HobbiesScreen(data) { vm.toggleInterest(it) }
+                        MainTab.Awards -> AchievementsScreen(data, now)
+                        MainTab.Profile -> ProfileScreen(
+                            vm = vm,
+                            now = now,
+                            onAddHabit = { overlay = "habit" },
+                            onRules = { overlay = "rules" }
+                        )
+                    }
+                }
+                Box(Modifier.background(Color(0xFF0B100E)).navigationBarsPadding()) {
+                    BottomBar(tab) { tab = it }
+                }
+            }
+        }
+
+        // Поздравление с новой наградой (один раз: после показа награды помечаются как увиденные)
+        val fresh = Game.awards.filter { it.id in data.unlocked && it.id !in data.celebrated }
+        if (fresh.isNotEmpty() && data.habits.isNotEmpty()) {
+            CelebrationOverlay(fresh.last()) { vm.markCelebrated() }
+        }
     }
+}
+
+@Composable
+private fun Overlay(vm: MainVm, now: Long, key: String, setOverlay: (String) -> Unit) {
+    val data = vm.data
+    when {
+        key == "habit" -> AddHabitScreen(
+            canCancel = true,
+            onCancel = { setOverlay("") },
+            onSave = { vm.addHabit(it); setOverlay("") }
+        )
+
+        key == "craving" -> {
+            val habit = data.mainHabit
+            if (habit != null) CravingScreen(habit, now) { setOverlay("") } else CloseOverlay(setOverlay)
+        }
+
+        key == "rules" -> RulesScreen { setOverlay("") }
+
+        key.startsWith("goal:") -> {
+            val id = key.removePrefix("goal:")
+            if (data.goals.any { it.id == id }) {
+                GoalDetailScreen(vm, id, onBack = { setOverlay("") }, onEdit = { setOverlay("edit:$id") })
+            } else {
+                CloseOverlay(setOverlay)
+            }
+        }
+
+        key.startsWith("edit:") -> {
+            val id = key.removePrefix("edit:")
+            GoalEditScreen(vm, id.ifEmpty { null }, onClose = { setOverlay("") })
+        }
+
+        else -> CloseOverlay(setOverlay)
+    }
+}
+
+/** Закрывает экран, который стал недоступен (например, цель удалена), вне композиции. */
+@Composable
+private fun CloseOverlay(setOverlay: (String) -> Unit) {
+    LaunchedEffect(Unit) { setOverlay("") }
 }

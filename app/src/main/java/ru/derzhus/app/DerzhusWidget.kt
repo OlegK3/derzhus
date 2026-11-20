@@ -36,7 +36,7 @@ class DerzhusWidget : GlanceAppWidget() {
         context: Context,
         id: GlanceId
     ) {
-        val habit = Store.load(context).firstOrNull()
+        val habit = Store.main(context)
         val now = System.currentTimeMillis()
 
         provideContent {
@@ -148,7 +148,7 @@ private fun WidgetContent(
 
             val line = if (habit.pricePerUnit > 0) {
                 "Сэкономлено ${
-                    Calc.money(Calc.saved(habit, now))
+                    Money.rub(Calc.savedKop(habit, now))
                 }"
             } else {
                 "Обошёлся без ${

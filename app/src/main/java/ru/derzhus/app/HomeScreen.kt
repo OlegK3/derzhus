@@ -1,37 +1,23 @@
 package ru.derzhus.app
 
-import android.content.Intent
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,213 +28,163 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.max
-import kotlin.math.sin
 
+/** Главный экран «Новая глава». */
 @Composable
 fun HomeScreen(
-    habits: List<Habit>,
-    habit: Habit,
+    data: AppData,
     now: Long,
-    onSelect: (String) -> Unit,
-    onAdd: () -> Unit,
+    onSelectHabit: (String) -> Unit,
+    onAddHabit: () -> Unit,
+    onOpenGoal: (String) -> Unit,
+    onAddGoal: () -> Unit,
     onCraving: () -> Unit,
-    onAwards: () -> Unit,
-    onUpdate: (Habit) -> Unit,
-    onDelete: (Habit) -> Unit
+    onRules: () -> Unit,
+    onRelapse: (Habit) -> Unit,
+    onOpenAwards: () -> Unit,
+    onOpenGoals: () -> Unit
 ) {
     val ctx = LocalContext.current
+    val habit = data.mainHabit
+    val xp = Game.xp(data, now)
     var askRelapse by remember { mutableStateOf(false) }
-    var askDelete by remember { mutableStateOf(false) }
-    var menuOpen by remember { mutableStateOf(false) }
 
-    val elapsed = Calc.elapsed(habit, now)
-    val daysD = Calc.days(habit, now)
-    val fullDays = Calc.fullDays(habit, now)
-    val unlocked = Awards.unlocked(habit, now)
-    val fresh = unlocked.filter { it.id !in habit.seen }
+    Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        // Верх: горы, заголовок, карточка уровня
+        Box(Modifier.fillMaxWidth()) {
+            MountainBackdrop(Modifier.fillMaxWidth().height(200.dp))
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PeakIcon(Modifier.size(30.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Новая глава", color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(14.dp))
+                LevelCard(xp, onClick = onOpenAwards)
+            }
+        }
 
-    val goals = Awards.dayGoals
-    val next = goals.firstOrNull { it.threshold > daysD }
-    val prevT = goals.lastOrNull { it.threshold <= daysD }?.threshold ?: 0.0
-    val progress = if (next == null) 1f
-    else ((daysD - prevT) / (next.threshold - prevT)).toFloat().coerceIn(0f, 1f)
-    val animProgress by animateFloatAsState(progress, tween(800, easing = FastOutSlowInEasing), label = "progress")
-
-    val bestMs = max(habit.bestMillis, elapsed)
-    val bestDays = bestMs / Calc.DAY
-
-    Box(Modifier.fillMaxSize()) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp)
-        ) {
-            // Шапка
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Держусь",
-                    color = Accent, fontSize = 26.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                Box {
-                    TextButton(onClick = { menuOpen = true }) { Text("⋯", color = Muted, fontSize = 24.sp) }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Удалить «${habit.title}»") },
-                            onClick = { menuOpen = false; askDelete = true }
-                        )
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            if (data.habits.size > 1) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    items(data.habits, key = { it.id }) { h ->
+                        Pill(h.title, selected = h.id == habit?.id, onClick = { onSelectHabit(h.id) })
                     }
                 }
             }
 
-            // Переключатель целей
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-                items(habits, key = { it.id }) { h ->
-                    FilterChip(
-                        selected = h.id == habit.id,
-                        onClick = { onSelect(h.id) },
-                        label = { Text(h.title) }
-                    )
-                }
-                item { AssistChip(onClick = onAdd, label = { Text("+ Добавить") }) }
-            }
+            if (habit != null) {
+                val days = Calc.fullDays(habit, now)
+                val daysD = Calc.days(habit, now)
+                val next = Game.dayAwards.firstOrNull { it.threshold > daysD }
+                val prev = Game.dayAwards.lastOrNull { it.threshold <= daysD }?.threshold ?: 0L
+                val progress = if (next == null) 1f
+                else ((daysD - prev) / (next.threshold - prev)).toFloat().coerceIn(0f, 1f)
 
-            // Кольцо прогресса
-            Box(
-                Modifier
-                    .fillMaxWidth(0.82f)
-                    .aspectRatio(1f)
-                    .align(Alignment.CenterHorizontally),
-                contentAlignment = Alignment.Center
-            ) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val stroke = 16.dp.toPx()
-                    val inset = stroke / 2
-                    val arcSize = Size(size.width - stroke, size.height - stroke)
-                    drawArc(
-                        color = Surface2, startAngle = -90f, sweepAngle = 360f, useCenter = false,
-                        topLeft = Offset(inset, inset), size = arcSize, style = Stroke(stroke)
-                    )
-                    drawArc(
-                        color = Accent, startAngle = -90f, sweepAngle = 360f * animProgress, useCenter = false,
-                        topLeft = Offset(inset, inset), size = arcSize,
-                        style = Stroke(stroke, cap = StrokeCap.Round)
-                    )
+                // Кольцо дней
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    DaysRing(days, "${Calc.dayWord(days)} без ${habit.name}", progress)
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(habit.title, color = Muted, fontSize = 15.sp)
-                    Text("$fullDays", color = TextMain, fontSize = 84.sp, fontWeight = FontWeight.Light)
-                    Text(Calc.dayWord(fullDays), color = Accent, fontSize = 20.sp)
-                    Text(
-                        Calc.duration(elapsed % Calc.DAY, withSeconds = true),
-                        color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp)
-                    )
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(AccentSoft)
+                            .border(1.dp, Accent.copy(alpha = 0.5f), RoundedCornerShape(50))
+                            .padding(horizontal = 18.dp, vertical = 7.dp)
+                    ) {
+                        Text(Praise.tag(habit, now), color = Accent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
                 }
-            }
-
-            // Следующая цель
-            Text(
-                text = if (next != null)
-                    "Следующая цель: ${next.emoji} ${next.title}, осталось " +
-                        Calc.duration((next.threshold * Calc.DAY).toLong() - elapsed)
-                else "Ты прошёл все цели. Это легенда.",
-                color = Muted, fontSize = 14.sp, textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 16.dp)
-            )
-
-            // Статистика 2x2
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (habit.pricePerUnit > 0)
-                    StatCard("Сэкономлено", Calc.money(Calc.saved(habit, now)), Modifier.weight(1f))
-                else
-                    StatCard("Награды", "${unlocked.size} из ${Awards.all.size}", Modifier.weight(1f))
-                StatCard(
-                    "Обошёлся без",
-                    "${Calc.count(Calc.avoided(habit, now))} ${habit.unitLabel}",
-                    Modifier.weight(1f)
+                Text(
+                    Praise.daily(habit, now),
+                    color = Muted, fontSize = 14.sp, lineHeight = 20.sp, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 16.dp)
                 )
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard("Рекорд", Calc.daysText(bestDays), Modifier.weight(1f))
-                StatCard("Уровень", Calc.level(fullDays).name, Modifier.weight(1f))
-            }
 
-            // Похвала
-            Column(
-                Modifier
-                    .padding(top = 16.dp)
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF1F3D38))
-                    .padding(16.dp)
-            ) {
-                Text(Praise.daily(habit, now), color = TextMain, fontSize = 16.sp, lineHeight = 22.sp)
-            }
-
-            // Кнопки
-            Button(
-                onClick = onCraving,
-                modifier = Modifier.padding(top = 16.dp).fillMaxWidth().height(54.dp)
-            ) { Text("Тянет? Помоги мне", fontSize = 17.sp, fontWeight = FontWeight.SemiBold) }
-
-            Row(
-                Modifier.padding(top = 10.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedButton(onClick = onAwards, modifier = Modifier.weight(1f)) {
-                    Text("Награды ${unlocked.size}/${Awards.all.size}")
+                // Расчётная экономия и реальные накопления: независимые показатели
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (habit.perDayKop > 0) {
+                        StatTile("💳", "Сэкономлено", Money.rub(Calc.savedKop(habit, now)), "(предполагаемо)", Modifier.weight(1f))
+                    } else {
+                        StatTile("✨", "Обошёлся без", "${Calc.count(Calc.avoided(habit, now))} ${habit.unitLabel}", null, Modifier.weight(1f))
+                    }
+                    StatTile("🐷", "Реально отложено", Money.rub(data.totalSavedKop), null, Modifier.weight(1f))
                 }
-                OutlinedButton(
-                    onClick = {
-                        val text = "Я держусь уже ${Calc.daysText(fullDays)}: ${habit.title.lowercase()}! " +
-                            (if (habit.pricePerUnit > 0) "Сэкономил ${Calc.money(Calc.saved(habit, now))}. " else "") +
-                            "Считаю в приложении «Держусь»."
-                        val send = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, text)
+
+                Spacer(Modifier.height(14.dp))
+                DreamCard(data, now, onOpenGoal, onAddGoal, onOpenGoals)
+
+                // Ближайшая цель по дням
+                if (next != null) {
+                    Spacer(Modifier.height(12.dp))
+                    val left = (next.threshold * Calc.DAY) - Calc.elapsed(habit, now)
+                    AppCard(Modifier.fillMaxWidth(), onClick = onOpenAwards, padding = 14.dp) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(next.icon, fontSize = 34.sp)
+                            Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Ближайшая цель", color = Muted, fontSize = 12.sp)
+                                Text(
+                                    "${next.threshold} ${Calc.dayWord(next.threshold)} без ${habit.name}",
+                                    color = TextMain, fontSize = 17.sp, fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    "Осталось " + Calc.daysText(Calc.ceilDiv(left, Calc.DAY)),
+                                    color = Muted, fontSize = 13.sp
+                                )
+                            }
                         }
-                        ctx.startActivity(Intent.createChooser(send, "Поделиться"))
-                    },
-                    modifier = Modifier.weight(1f)
-                ) { Text("Поделиться") }
-            }
+                    }
+                }
 
-            TextButton(
-                onClick = { askRelapse = true },
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp, bottom = 24.dp)
-            ) { Text("Сорвался", color = Muted) }
-        }
-
-        if (fresh.isNotEmpty()) {
-            CelebrationOverlay(fresh.last()) {
-                onUpdate(habit.copy(seen = habit.seen + unlocked.map { it.id }))
+                // Поддержка
+                Spacer(Modifier.height(14.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GhostButton("Тянет? Помощь", onClick = onCraving, modifier = Modifier.weight(1f))
+                    GhostButton("Три правила", onClick = onRules, modifier = Modifier.weight(1f))
+                }
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    TextButton(onClick = { askRelapse = true }) { Text("Сорвался", color = Muted) }
+                }
+            } else {
+                // Первая привычка ещё не добавлена
+                Spacer(Modifier.height(24.dp))
+                AppCard(Modifier.fillMaxWidth()) {
+                    Text("Начни новую главу", color = TextMain, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Добавь привычку, от которой отказываешься: алкоголь, сигареты, сладкое или своё. " +
+                            "Приложение посчитает дни и расчётную экономию.",
+                        color = Muted, fontSize = 15.sp, lineHeight = 21.sp,
+                        modifier = Modifier.padding(top = 6.dp, bottom = 14.dp)
+                    )
+                    PrimaryButton("Добавить привычку", onClick = onAddHabit, modifier = Modifier.fillMaxWidth())
+                }
+                Spacer(Modifier.height(12.dp))
+                DreamCard(data, now, onOpenGoal, onAddGoal, onOpenGoals)
             }
+            Spacer(Modifier.height(20.dp))
         }
     }
 
-    if (askRelapse) {
+    if (askRelapse && habit != null) {
         AlertDialog(
             onDismissRequest = { askRelapse = false },
             containerColor = Surface1,
             title = { Text("Сорвался?") },
-            text = { Text(Praise.relapse(bestDays)) },
+            text = { Text(Praise.relapse(Calc.recordDays(habit, now))) },
             confirmButton = {
                 TextButton(onClick = {
                     askRelapse = false
-                    onUpdate(habit.copy(startMillis = now, bestMillis = bestMs, seen = emptySet()))
+                    onRelapse(habit)
                 }) { Text("Начать новую серию") }
             },
             dismissButton = {
@@ -256,81 +192,74 @@ fun HomeScreen(
             }
         )
     }
-
-    if (askDelete) {
-        AlertDialog(
-            onDismissRequest = { askDelete = false },
-            containerColor = Surface1,
-            title = { Text("Удалить цель?") },
-            text = { Text("«${habit.title}» и вся статистика будут удалены.") },
-            confirmButton = {
-                TextButton(onClick = { askDelete = false; onDelete(habit) }) { Text("Удалить", color = Warn) }
-            },
-            dismissButton = { TextButton(onClick = { askDelete = false }) { Text("Отмена") } }
-        )
-    }
 }
 
 @Composable
-fun CelebrationOverlay(award: Award, onClose: () -> Unit) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color(0xE6000000))
-    ) {
-        Confetti(Modifier.fillMaxSize())
-        Column(
-            Modifier.align(Alignment.Center).padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(award.emoji, fontSize = 80.sp)
+private fun StatTile(icon: String, label: String, value: String, note: String?, modifier: Modifier = Modifier) {
+    AppCard(modifier, padding = 14.dp) {
+        Box(
+            Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(AccentSoft),
+            contentAlignment = Alignment.Center
+        ) { Text(icon, fontSize = 20.sp) }
+        Text(label, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+        Text(value, color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        if (note != null) Text(note, color = Muted, fontSize = 12.sp)
+    }
+}
+
+/** Карточка «Главная мечта» с фотографией, процентом и прогнозом. */
+@Composable
+private fun DreamCard(
+    data: AppData,
+    now: Long,
+    onOpenGoal: (String) -> Unit,
+    onAddGoal: () -> Unit,
+    onOpenGoals: () -> Unit
+) {
+    val ctx = LocalContext.current
+    val goal = data.mainGoal
+    if (goal == null) {
+        AppCard(Modifier.fillMaxWidth(), onClick = onAddGoal) {
+            Text("Главная мечта", color = TextMain, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Новая награда!", color = Accent, fontSize = 16.sp,
-                modifier = Modifier.padding(top = 12.dp)
+                "Добавь цель, на которую будешь копить: мотоцикл, поездка, палатка.",
+                color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
             )
-            Text(
-                award.title, color = TextMain, fontSize = 28.sp, fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp)
+            PrimaryButton("Добавить мечту", onClick = onAddGoal, modifier = Modifier.fillMaxWidth(), leading = "+")
+        }
+        return
+    }
+    val daysLeft = Calc.daysToGoal(goal, Calc.paceKop(data))
+    AppCard(Modifier.fillMaxWidth(), onClick = { onOpenGoal(goal.id) }, padding = 14.dp) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Главная мечта", color = TextMain, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text("›", color = Muted, fontSize = 22.sp)
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            GoalImage(
+                goal.photos.firstOrNull()?.let { photoFile(ctx, it) },
+                Modifier.size(width = 96.dp, height = 84.dp).clip(RoundedCornerShape(14.dp)),
+                emojiSize = 30.sp
             )
-            Text(award.desc, color = Muted, fontSize = 16.sp, modifier = Modifier.padding(top = 4.dp))
-            Button(onClick = onClose, modifier = Modifier.padding(top = 28.dp)) {
-                Text("Ура!", fontSize = 17.sp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(goal.title, color = TextMain, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(Money.rub(goal.costKop), color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(6.dp))
+                AppProgress(goal.progress)
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("${Money.rub(goal.savedKop)} (${goal.percent}%)", color = Muted, fontSize = 12.sp)
+                    Text(
+                        when {
+                            goal.achieved -> "Достигнута!"
+                            daysLeft != null -> "Осталось " + Calc.daysText(daysLeft)
+                            else -> ""
+                        },
+                        color = if (goal.achieved) Accent else Muted, fontSize = 12.sp
+                    )
+                }
             }
-        }
-    }
-}
-
-private class Piece(
-    val x: Float, val y0: Float, val speed: Float, val size: Float,
-    val color: Color, val freq: Float, val phase: Float
-)
-
-@Composable
-fun Confetti(modifier: Modifier = Modifier) {
-    val pieces = remember {
-        val r = kotlin.random.Random(7)
-        val colors = listOf(Accent, Color(0xFFFBBF24), Color(0xFFF472B6), Color(0xFF60A5FA), Color(0xFFA78BFA))
-        List(70) {
-            Piece(
-                x = r.nextFloat(), y0 = r.nextFloat(),
-                speed = (1 + r.nextInt(2)).toFloat(),     // целые значения: движение без «скачков»
-                size = 8f + r.nextFloat() * 10f,
-                color = colors[r.nextInt(colors.size)],
-                freq = (1 + r.nextInt(3)).toFloat(),
-                phase = r.nextFloat() * 6.28f
-            )
-        }
-    }
-    val t by rememberInfiniteTransition(label = "confetti").animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(6000, easing = LinearEasing)),
-        label = "t"
-    )
-    Canvas(modifier) {
-        pieces.forEach { p ->
-            val y = ((p.y0 + t * p.speed) % 1f) * size.height
-            val x = p.x * size.width + sin(t * 6.2832f * p.freq + p.phase) * 24f
-            drawRect(p.color, Offset(x, y), Size(p.size, p.size * 1.6f))
         }
     }
 }
