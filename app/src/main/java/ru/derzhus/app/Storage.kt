@@ -239,7 +239,7 @@ class Repo(private val ctx: Context) {
 
     // ---------- Экспорт / импорт ----------
 
-    /** Архив: data.json + photos/*. Фотографии сохраняются вместе с данными. */
+    /** Архив: data.json + папка photos. Фотографии сохраняются вместе с данными. */
     fun exportZip(out: OutputStream, d: AppData) {
         ZipOutputStream(out).use { zip ->
             zip.putNextEntry(ZipEntry("data.json"))
