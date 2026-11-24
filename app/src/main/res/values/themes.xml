@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Derzhus" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#0E1513</item>
+    <style name="Theme.Derzhus" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F7F5EF</item>
         <item name="android:statusBarColor">#00000000</item>
         <item name="android:navigationBarColor">#00000000</item>
     </style>

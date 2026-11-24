@@ -68,7 +68,7 @@ fun GoalsScreen(
             Box(
                 Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Accent).clickable(onClick = onAdd),
                 contentAlignment = Alignment.Center
-            ) { Icon(Icons.Filled.Add, contentDescription = "Добавить цель", tint = Color(0xFF05210F)) }
+            ) { Icon(Icons.Filled.Add, contentDescription = "Добавить цель", tint = OnAccent) }
         }
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Pill("Все цели (${data.goals.size})", filter == 0, { filter = 0 })
@@ -174,7 +174,7 @@ private fun GoalCard(
                 Box(
                     Modifier.align(Alignment.BottomEnd).padding(12.dp).size(32.dp).clip(CircleShape).background(Accent),
                     contentAlignment = Alignment.Center
-                ) { Icon(Icons.Filled.Check, contentDescription = null, tint = Color(0xFF05210F)) }
+                ) { Icon(Icons.Filled.Check, contentDescription = null, tint = OnAccent) }
             }
         }
         Column(Modifier.padding(14.dp)) {

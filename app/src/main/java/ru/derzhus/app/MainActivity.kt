@@ -38,8 +38,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT)
+            statusBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
         )
         Notifier.ensureChannel(this)
         setContent {
@@ -120,7 +120,8 @@ fun AppRoot(vm: MainVm = viewModel()) {
                             onRules = { overlay = "rules" },
                             onRelapse = { vm.relapse(it.id) },
                             onOpenAwards = { tab = MainTab.Awards },
-                            onOpenGoals = { tab = MainTab.Goals }
+                            onOpenGoals = { tab = MainTab.Goals },
+                            onOpenProfile = { tab = MainTab.Profile }
                         )
 
                         MainTab.Goals -> GoalsScreen(
@@ -142,7 +143,7 @@ fun AppRoot(vm: MainVm = viewModel()) {
                         )
                     }
                 }
-                Box(Modifier.background(Color(0xFF0B100E)).navigationBarsPadding()) {
+                Box(Modifier.background(Surface1).navigationBarsPadding()) {
                     BottomBar(tab) { tab = it }
                 }
             }

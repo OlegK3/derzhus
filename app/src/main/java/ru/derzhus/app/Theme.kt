@@ -33,6 +33,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -59,36 +68,50 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import java.io.File
 
-// ---------- Палитра (по восьмиэкранному макету) ----------
-val Bg = Color(0xFF080B0A)          // графитовый, почти чёрный
-val Surface1 = Color(0xFF121715)    // карточка
-val Surface2 = Color(0xFF1A221E)    // приподнятая карточка
-val Border = Color(0xFF26302B)      // тонкая граница
-val Accent = Color(0xFF4ADE80)      // яркий зелёный
-val AccentDeep = Color(0xFF22A45A)
-val AccentSoft = Color(0xFF16301F)
-val AccentLight = Color(0xFF86EFAC)
-val Gold = Color(0xFFF2B33D)
-val TextMain = Color(0xFFF4F7F5)
-val Muted = Color(0xFF9BA7A1)
-val Warn = Color(0xFFF59E0B)
-val Danger = Color(0xFFEF6B5B)
+// ---------- Палитра (design_tokens.json, светлый вариант №1) ----------
+val Bg = Color(0xFFF7F5EF)          // background
+val Surface1 = Color(0xFFFFFFFF)    // surface
+val Surface2 = Color(0xFFF0F3EB)    // surface_alt
+val Border = Color(0xFFDDE4DA)      // outline
+val Accent = Color(0xFF168A43)      // primary
+val AccentDeep = Color(0xFF075A36)  // primary_dark
+val AccentSoft = Color(0xFFD8F2D6)  // primary_light
+val AccentLight = Color(0xFF3FBF63) // яркий конец градиента прогресса
+val Gold = Color(0xFFE8AE31)        // warning
+val TextMain = Color(0xFF17231D)    // text_primary
+val Muted = Color(0xFF55635B)       // text_secondary
+val Warn = Color(0xFFE8AE31)
+val Danger = Color(0xFFB3392B)
+val OnAccent = Color(0xFFFFFFFF)
+val ProgressTrack = Color(0xFFE3E9DE)
+val Scrim = Color(0x300F2518)       // scrim
 
 @Composable
 fun DerzhusTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = darkColorScheme(
+        colorScheme = lightColorScheme(
             primary = Accent,
-            onPrimary = Color(0xFF05210F),
+            onPrimary = OnAccent,
+            primaryContainer = AccentSoft,
+            onPrimaryContainer = AccentDeep,
+            secondary = AccentDeep,
+            onSecondary = OnAccent,
+            secondaryContainer = AccentSoft,
+            onSecondaryContainer = AccentDeep,
             background = Bg,
             onBackground = TextMain,
             surface = Surface1,
             onSurface = TextMain,
             surfaceVariant = Surface2,
             onSurfaceVariant = Muted,
-            secondaryContainer = AccentSoft,
-            onSecondaryContainer = TextMain,
-            outline = Border
+            surfaceContainerLowest = Surface1,
+            surfaceContainerLow = Surface1,
+            surfaceContainer = Surface1,
+            surfaceContainerHigh = Surface1,
+            surfaceContainerHighest = Surface2,
+            outline = Border,
+            outlineVariant = Border,
+            error = Danger
         ),
         content = content
     )
@@ -103,10 +126,11 @@ fun AppCard(
     padding: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(Dim.CardRadius)
     val base = modifier
+        .shadow(2.dp, shape, ambientColor = Color(0x33203A2A), spotColor = Color(0x33203A2A))
         .clip(shape)
-        .background(Brush.verticalGradient(listOf(Surface2, Surface1)))
+        .background(Surface1)
         .border(1.dp, Border, shape)
     val m = if (onClick != null) base.clickable(onClick = onClick) else base
     Column(m.padding(padding), content = content)
@@ -120,41 +144,41 @@ fun PrimaryButton(
     enabled: Boolean = true,
     leading: String? = null
 ) {
-    val shape = RoundedCornerShape(16.dp)
-    val brush = if (enabled)
-        Brush.horizontalGradient(listOf(Color(0xFF7CF0A6), Color(0xFF3FD06F)))
-    else
-        Brush.horizontalGradient(listOf(Color(0xFF26302B), Color(0xFF26302B)))
+    val shape = RoundedCornerShape(Dim.ButtonRadius)
     Box(
         modifier
-            .height(54.dp)
+            .defaultMinSize(minHeight = 54.dp)
             .clip(shape)
-            .background(brush)
+            .background(if (enabled) Accent else Surface2)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
             (if (leading != null) "$leading  " else "") + text,
-            color = if (enabled) Color(0xFF05210F) else Muted,
+            color = if (enabled) OnAccent else Muted,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 17.sp
+            fontSize = 17.sp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         )
     }
 }
 
 @Composable
 fun GhostButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, color: Color = TextMain) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(Dim.ButtonRadius)
     Box(
         modifier
-            .height(48.dp)
+            .defaultMinSize(minHeight = Dim.MinTouch)
             .clip(shape)
             .border(1.dp, Border, shape)
             .background(Surface1)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = color, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text(
+            text, color = color, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+        )
     }
 }
 
@@ -163,6 +187,7 @@ fun Pill(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifie
     val shape = RoundedCornerShape(50)
     Box(
         modifier
+            .defaultMinSize(minHeight = 40.dp)
             .clip(shape)
             .background(if (selected) Accent else Surface1)
             .border(1.dp, if (selected) Accent else Border, shape)
@@ -172,7 +197,7 @@ fun Pill(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifie
     ) {
         Text(
             text,
-            color = if (selected) Color(0xFF05210F) else TextMain,
+            color = if (selected) OnAccent else TextMain,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium
         )
@@ -182,7 +207,7 @@ fun Pill(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifie
 @Composable
 fun AppProgress(fraction: Float, modifier: Modifier = Modifier, height: Dp = 8.dp) {
     val shape = RoundedCornerShape(50)
-    Box(modifier.fillMaxWidth().height(height).clip(shape).background(Color(0xFF232C28))) {
+    Box(modifier.fillMaxWidth().height(height).clip(shape).background(ProgressTrack)) {
         val f = fraction.coerceIn(0f, 1f)
         if (f > 0f) {
             Box(
@@ -190,7 +215,7 @@ fun AppProgress(fraction: Float, modifier: Modifier = Modifier, height: Dp = 8.d
                     .fillMaxWidth(f)
                     .height(height)
                     .clip(shape)
-                    .background(Brush.horizontalGradient(listOf(AccentDeep, Accent, AccentLight)))
+                    .background(Brush.horizontalGradient(listOf(Accent, AccentLight)))
             )
         }
     }
@@ -249,9 +274,9 @@ fun AppSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
             checkedThumbColor = Color.White,
             checkedTrackColor = Accent,
             checkedBorderColor = Accent,
-            uncheckedThumbColor = Muted,
-            uncheckedTrackColor = Surface2,
-            uncheckedBorderColor = Border
+            uncheckedThumbColor = Color.White,
+            uncheckedTrackColor = Color(0xFFB9C4BC),
+            uncheckedBorderColor = Color(0xFFB9C4BC)
         )
     )
 }
@@ -323,7 +348,7 @@ fun BackLink(onBack: () -> Unit, modifier: Modifier = Modifier) {
 fun photoFile(ctx: Context, name: String): File =
     File(File(ctx.filesDir, "photos"), File(name).name)
 
-/** Фотография цели; если её нет — тёмная заглушка с горами. */
+/** Фотография цели; если её нет, показывается нейтральный пейзаж из комплекта. */
 @Composable
 fun GoalImage(file: File?, modifier: Modifier = Modifier, emojiSize: TextUnit = 40.sp) {
     if (file != null && file.exists()) {
@@ -334,12 +359,12 @@ fun GoalImage(file: File?, modifier: Modifier = Modifier, emojiSize: TextUnit = 
             modifier = modifier
         )
     } else {
-        Box(
-            modifier.background(Brush.linearGradient(listOf(Color(0xFF1E3A2F), Color(0xFF0F1C17)))),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("🏔️", fontSize = emojiSize)
-        }
+        Image(
+            painter = painterResource(Photos.sunrise),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+        )
     }
 }
 
@@ -353,78 +378,49 @@ enum class MainTab(val label: String) {
     Profile("Профиль")
 }
 
+@DrawableRes
+fun MainTab.iconRes(): Int = when (this) {
+    MainTab.Home -> R.drawable.ic_home
+    MainTab.Goals -> R.drawable.ic_goals
+    MainTab.Hobbies -> R.drawable.ic_hobbies
+    MainTab.Awards -> R.drawable.ic_achievements
+    MainTab.Profile -> R.drawable.ic_profile
+}
+
 @Composable
 fun NavIcon(tab: MainTab, tint: Color, modifier: Modifier = Modifier.size(24.dp)) {
-    when (tab) {
-        MainTab.Home -> Icon(Icons.Outlined.Home, contentDescription = null, tint = tint, modifier = modifier)
-        MainTab.Profile -> Icon(Icons.Outlined.Person, contentDescription = null, tint = tint, modifier = modifier)
-        MainTab.Goals -> Canvas(modifier) {
-            val c = center
-            val r = size.minDimension / 2
-            val s = Stroke(2.dp.toPx())
-            drawCircle(tint, radius = r * 0.9f, center = c, style = s)
-            drawCircle(tint, radius = r * 0.55f, center = c, style = s)
-            drawCircle(tint, radius = r * 0.18f, center = c)
-        }
-        MainTab.Hobbies -> Canvas(modifier) {
-            val w = size.width
-            val h = size.height
-            val p = Path().apply {
-                moveTo(w * 0.15f, h * 0.85f)
-                cubicTo(w * 0.1f, h * 0.3f, w * 0.5f, h * 0.1f, w * 0.9f, h * 0.1f)
-                cubicTo(w * 0.9f, h * 0.55f, w * 0.6f, h * 0.9f, w * 0.15f, h * 0.85f)
-                close()
-            }
-            drawPath(p, tint, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-            drawLine(
-                tint, Offset(w * 0.15f, h * 0.85f), Offset(w * 0.55f, h * 0.45f),
-                strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round
-            )
-        }
-        MainTab.Awards -> Canvas(modifier) {
-            val w = size.width
-            val h = size.height
-            val sw = 2.dp.toPx()
-            val cup = Path().apply {
-                moveTo(w * 0.25f, h * 0.12f)
-                lineTo(w * 0.75f, h * 0.12f)
-                lineTo(w * 0.75f, h * 0.4f)
-                cubicTo(w * 0.75f, h * 0.62f, w * 0.25f, h * 0.62f, w * 0.25f, h * 0.4f)
-                close()
-            }
-            drawPath(cup, tint, style = Stroke(sw, cap = StrokeCap.Round, join = StrokeJoin.Round))
-            drawLine(tint, Offset(w * 0.5f, h * 0.58f), Offset(w * 0.5f, h * 0.8f), strokeWidth = sw, cap = StrokeCap.Round)
-            drawLine(tint, Offset(w * 0.32f, h * 0.88f), Offset(w * 0.68f, h * 0.88f), strokeWidth = sw, cap = StrokeCap.Round)
-        }
-    }
+    Icon(painterResource(tab.iconRes()), contentDescription = null, tint = tint, modifier = modifier)
 }
 
 @Composable
 fun BottomBar(current: MainTab, onSelect: (MainTab) -> Unit) {
-    Column(Modifier.fillMaxWidth().background(Color(0xFF0B100E))) {
+    Column(Modifier.fillMaxWidth().background(Surface1)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(Border))
-        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+        Row(
+            Modifier.fillMaxWidth().height(Dim.BottomNavHeight),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             MainTab.entries.forEach { t ->
                 val sel = t == current
                 val tint = if (sel) Accent else Muted
                 Column(
                     Modifier
                         .weight(1f)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { onSelect(t) }
+                        .heightIn(min = Dim.MinTouch)
+                        .selectable(selected = sel, role = Role.Tab, onClick = { onSelect(t) })
                         .padding(vertical = 4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     NavIcon(t, tint)
                     Text(
                         t.label,
                         color = tint,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         maxLines = 1,
-                        fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
-                        modifier = Modifier.padding(top = 2.dp)
+                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.padding(top = 3.dp)
                     )
                 }
             }
