@@ -24,6 +24,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,7 +44,7 @@ fun AchievementsScreen(data: AppData, now: Long) {
         ScreenTitle("Достижения")
 
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            Modifier.fillMaxWidth().padding(horizontal = Dim.PagePadding),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Pill("Мои достижения", tab == 0, { tab = 0 }, Modifier.weight(1f))
@@ -112,15 +116,18 @@ private fun AwardGrid(list: List<Award>, data: AppData) {
 
 @Composable
 private fun AwardTile(a: Award, open: Boolean, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(Dim.CardRadius)
     Box(
         modifier
+            .shadow(if (open) 2.dp else 0.dp, shape)
             .clip(shape)
-            .background(if (open) AccentSoft else Surface1)
+            .background(if (open) Surface1 else Surface2)
+            .border(1.dp, Border, shape)
             .padding(vertical = 12.dp, horizontal = 6.dp)
+            .semantics(mergeDescendants = true) {}
     ) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(a.icon, fontSize = 34.sp, modifier = Modifier.alpha(if (open) 1f else 0.35f))
+            AppIcon(a.icon, tint = if (open) Accent else Muted.copy(alpha = 0.55f), size = 40.dp)
             Text(
                 a.title, color = if (open) TextMain else Muted, fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
@@ -128,12 +135,17 @@ private fun AwardTile(a: Award, open: Boolean, modifier: Modifier = Modifier) {
             )
             Text(a.desc, color = Muted, fontSize = 11.sp, textAlign = TextAlign.Center)
         }
-        Text(
-            if (open) "✓" else "🔒",
-            color = if (open) Accent else Muted,
-            fontSize = if (open) 16.sp else 12.sp,
-            modifier = Modifier.align(Alignment.TopEnd).padding(end = 2.dp)
-        )
+        Box(
+            Modifier.align(Alignment.TopEnd).size(20.dp).clip(CircleShape)
+                .background(if (open) Accent else Border),
+            contentAlignment = Alignment.Center
+        ) {
+            AppIcon(
+                if (open) R.drawable.ic_check else R.drawable.ic_lock,
+                tint = if (open) OnAccent else Muted, size = 12.dp,
+                contentDescription = if (open) "Получено" else "Закрыто"
+            )
+        }
     }
 }
 
@@ -159,8 +171,8 @@ private fun LevelsTab(xp: Int) {
                         Text("от ${l.fromXp} XP", color = Muted, fontSize = 13.sp)
                     }
                     Text(
-                        if (isCurrent) "Сейчас" else if (reached) "✓" else "🔒",
-                        color = if (reached) Accent else Muted, fontSize = 13.sp
+                        if (isCurrent) "Сейчас" else if (reached) "Получен" else "Закрыт",
+                        color = if (reached) Accent else Muted, fontSize = 13.sp, fontWeight = FontWeight.Medium
                     )
                 }
             }

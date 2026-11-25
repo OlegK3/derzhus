@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -89,14 +90,28 @@ fun GoalEditScreen(vm: MainVm, goalId: String?, onClose: () -> Unit) {
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("←", color = TextMain, fontSize = 24.sp, modifier = Modifier.clickableNoRipple { cancel() }.padding(end = 16.dp))
+            Box(Modifier.size(Dim.MinTouch).clickable { cancel() }, contentAlignment = Alignment.Center) {
+                AppIcon(R.drawable.ic_arrow_back, tint = TextMain, contentDescription = "Назад")
+            }
+            Spacer(Modifier.width(4.dp))
             Text(
                 if (existing == null) "Новая цель" else "Редактировать цель",
-                color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold
+                color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)
             )
+            Box(
+                Modifier.size(Dim.MinTouch).clickable {
+                    touched = true
+                    if (valid) {
+                        vm.deletePhotoFiles(added.filter { it !in photos })
+                        vm.saveGoal(existing, title.trim(), costKop!!, savedKop!!, photos.toList(), main, note.trim())
+                        onClose()
+                    }
+                },
+                contentAlignment = Alignment.Center
+            ) { AppIcon(R.drawable.ic_check, tint = if (valid) Accent else Muted, contentDescription = "Сохранить") }
         }
 
-        Column(Modifier.padding(horizontal = 16.dp)) {
+        Column(Modifier.padding(horizontal = Dim.PagePadding)) {
             // Главное фото
             Box(
                 Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(20.dp))
@@ -105,9 +120,13 @@ fun GoalEditScreen(vm: MainVm, goalId: String?, onClose: () -> Unit) {
             ) {
                 GoalImage(photos.firstOrNull()?.let { photoFile(ctx, it) }, Modifier.fillMaxSize())
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        Modifier.clip(RoundedCornerShape(50)).background(Color(0x99000000)).padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) { Text("📷  Добавить фото", color = Color.White, fontSize = 14.sp) }
+                    Row(
+                        Modifier.clip(RoundedCornerShape(50)).background(Surface1.copy(alpha = 0.92f)).padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AppIcon(R.drawable.ic_camera, tint = AccentDeep, size = 20.dp)
+                        Text("  Добавить фото", color = TextMain, fontSize = 14.sp)
+                    }
                 }
             }
 
@@ -122,9 +141,9 @@ fun GoalEditScreen(vm: MainVm, goalId: String?, onClose: () -> Unit) {
                         GoalImage(photoFile(ctx, name), Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)), 20.sp)
                         Box(
                             Modifier.align(Alignment.TopEnd).size(20.dp).clip(CircleShape)
-                                .background(Color(0xCC000000)).clickable { photos.remove(name) },
+                                .background(Surface1.copy(alpha = 0.92f)).clickable { photos.remove(name) },
                             contentAlignment = Alignment.Center
-                        ) { Text("✕", color = Color.White, fontSize = 10.sp) }
+                        ) { AppIcon(R.drawable.ic_close, tint = TextMain, size = 12.dp, contentDescription = "Убрать фото") }
                     }
                 }
                 item {
@@ -132,7 +151,7 @@ fun GoalEditScreen(vm: MainVm, goalId: String?, onClose: () -> Unit) {
                         Modifier.size(62.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, Border, RoundedCornerShape(12.dp))
                             .background(Surface1).clickable(onClick = pickPhotos),
                         contentAlignment = Alignment.Center
-                    ) { Text("+", color = TextMain, fontSize = 24.sp) }
+                    ) { AppIcon(R.drawable.ic_plus, tint = AccentDeep, contentDescription = "Добавить фото") }
                 }
             }
 
@@ -152,7 +171,7 @@ fun GoalEditScreen(vm: MainVm, goalId: String?, onClose: () -> Unit) {
             Spacer(Modifier.height(14.dp))
             AppCard(Modifier.fillMaxWidth(), padding = 14.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("⭐", fontSize = 20.sp)
+                    IconBadge(R.drawable.ic_star, size = 36.dp)
                     Spacer(Modifier.width(10.dp))
                     Text("Сделать главной целью", color = TextMain, fontSize = 16.sp, modifier = Modifier.weight(1f))
                     AppSwitch(main) { main = it }
@@ -163,7 +182,7 @@ fun GoalEditScreen(vm: MainVm, goalId: String?, onClose: () -> Unit) {
             AppCard(Modifier.fillMaxWidth(), onClick = { more = !more }, padding = 14.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Дополнительно", color = TextMain, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                    Text(if (more) "⌄" else "›", color = Muted, fontSize = 20.sp)
+                    AppIcon(R.drawable.ic_chevron_right, tint = Muted, modifier = Modifier.rotate(if (more) 90f else 0f))
                 }
             }
             if (more) {

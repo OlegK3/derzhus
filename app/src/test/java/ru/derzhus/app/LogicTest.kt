@@ -131,4 +131,22 @@ class LogicTest {
         assertEquals("дней", Calc.dayWord(11))
         assertEquals("дней", Calc.dayWord(316))
     }
+
+    @Test
+    fun statsCountOnlyRealDepositsInPeriod() {
+        val now = 1_700_000_000_000L
+        fun dep(ts: Long, kop: Long, kind: String = "deposit") = Deposit("d$ts", ts, kop, kind, "")
+        val goal = Goal(
+            "g", "Цель", 1_000_000, emptyList(), 0L, true, null,
+            listOf(dep(now - 1000, 50_000), dep(now - 40 * day, 70_000), dep(now - 1000, 99_000, "initial"))
+        )
+        val data = AppData(goals = listOf(goal))
+        val week = StatsCalc.compute(data, 0, now)
+        assertEquals(7, week.buckets.size)
+        assertEquals(50_000L, week.totalKop)
+        assertEquals(50_000L, week.buckets.last().sumKop)
+        assertEquals(120_000L, StatsCalc.compute(data, 3, now).totalKop)
+        assertNull(StatsCalc.changePercent(10L, 0L))
+        assertEquals(50, StatsCalc.changePercent(150L, 100L))
+    }
 }

@@ -23,14 +23,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -93,23 +88,23 @@ fun GoalDetailScreen(vm: MainVm, goalId: String, onBack: () -> Unit, onEdit: () 
             GoalImage(goal.photos.getOrNull(bigIndex)?.let { photoFile(ctx, it) }, Modifier.fillMaxSize(), 64.sp)
             Box(
                 Modifier.fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color(0x66000000), Color.Transparent, Bg)))
+                    .background(Brush.verticalGradient(0f to Surface1.copy(alpha = 0.55f), 0.3f to Color.Transparent, 1f to Bg))
             )
             Box(
                 Modifier.align(Alignment.TopStart).padding(12.dp).size(40.dp).clip(CircleShape)
-                    .background(Color(0x99000000)).clickable(onClick = onBack),
+                    .background(Surface1.copy(alpha = 0.92f)).clickable(onClick = onBack),
                 contentAlignment = Alignment.Center
-            ) { Text("←", color = Color.White, fontSize = 20.sp) }
+            ) { AppIcon(R.drawable.ic_arrow_back, tint = TextMain, contentDescription = "Назад") }
             Row(Modifier.align(Alignment.TopEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
-                    Modifier.size(40.dp).clip(CircleShape).background(Color(0x99000000)).clickable(onClick = onEdit),
+                    Modifier.size(40.dp).clip(CircleShape).background(Surface1.copy(alpha = 0.92f)).clickable(onClick = onEdit),
                     contentAlignment = Alignment.Center
-                ) { Icon(Icons.Filled.Edit, contentDescription = "Редактировать", tint = Color.White) }
+                ) { AppIcon(R.drawable.ic_edit, tint = TextMain, size = 22.dp, contentDescription = "Редактировать") }
                 Box {
                     Box(
-                        Modifier.size(40.dp).clip(CircleShape).background(Color(0x99000000)).clickable { menu = true },
+                        Modifier.size(40.dp).clip(CircleShape).background(Surface1.copy(alpha = 0.92f)).clickable { menu = true },
                         contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Filled.MoreVert, contentDescription = "Меню", tint = Color.White) }
+                    ) { AppIcon(R.drawable.ic_more, tint = TextMain, size = 22.dp, contentDescription = "Меню") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         if (!goal.isMain) {
                             DropdownMenuItem(
@@ -139,8 +134,8 @@ fun GoalDetailScreen(vm: MainVm, goalId: String, onBack: () -> Unit, onEdit: () 
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text("+", color = TextMain, fontSize = 20.sp)
-                    Text("Добавить\nфото", color = Muted, fontSize = 8.sp, lineHeight = 10.sp)
+                    AppIcon(R.drawable.ic_camera, tint = AccentDeep, size = 24.dp, contentDescription = "Добавить фото")
+                    Text("Фото", color = Muted, fontSize = 11.sp)
                 }
             }
             itemsIndexed(goal.photos) { i, name ->
@@ -154,18 +149,22 @@ fun GoalDetailScreen(vm: MainVm, goalId: String, onBack: () -> Unit, onEdit: () 
                     )
                     Box(
                         Modifier.align(Alignment.TopEnd).size(20.dp).clip(CircleShape)
-                            .background(Color(0xCC000000)).clickable { photoToDelete = name },
+                            .background(Surface1.copy(alpha = 0.92f)).clickable { photoToDelete = name },
                         contentAlignment = Alignment.Center
-                    ) { Text("✕", color = Color.White, fontSize = 10.sp) }
+                    ) { AppIcon(R.drawable.ic_close, tint = TextMain, size = 12.dp, contentDescription = "Удалить фото") }
                 }
             }
         }
 
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = Dim.PagePadding, vertical = 14.dp)) {
             if (goal.isMain) {
-                Box(
-                    Modifier.clip(RoundedCornerShape(50)).background(AccentSoft).padding(horizontal = 10.dp, vertical = 4.dp)
-                ) { Text("★ Главная цель", color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium) }
+                Row(
+                    Modifier.clip(RoundedCornerShape(50)).background(AccentSoft).padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppIcon(R.drawable.ic_star, tint = AccentDeep, size = 12.dp)
+                    Text(" Главная цель", color = AccentDeep, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
             }
             Text(goal.title, color = TextMain, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
             Text(Money.rub(goal.costKop), color = Accent, fontSize = 30.sp, fontWeight = FontWeight.Bold)

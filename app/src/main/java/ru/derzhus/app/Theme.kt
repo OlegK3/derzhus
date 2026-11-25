@@ -318,12 +318,13 @@ fun ScreenTitle(text: String, modifier: Modifier = Modifier, trailing: @Composab
         modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        AppIcon(R.drawable.ic_mountain, tint = Accent, size = 28.dp)
         Text(
             text,
             color = TextMain,
-            fontSize = 26.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).padding(start = 8.dp)
         )
         if (trailing != null) trailing()
     }
@@ -336,12 +337,27 @@ fun Modifier.clickableNoRipple(onClick: () -> Unit): Modifier = composed {
 
 @Composable
 fun BackLink(onBack: () -> Unit, modifier: Modifier = Modifier) {
-    Text(
-        "← Назад",
-        color = Muted,
-        fontSize = 15.sp,
-        modifier = modifier.clickableNoRipple(onBack).padding(vertical = 8.dp)
-    )
+    Row(
+        modifier.defaultMinSize(minHeight = Dim.MinTouch).clickableNoRipple(onBack),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppIcon(R.drawable.ic_arrow_back, tint = TextMain)
+        Text(" Назад", color = Muted, fontSize = 15.sp)
+    }
+}
+
+/** Заголовок вложенного экрана: стрелка назад и название. */
+@Composable
+fun BackHeader(title: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.fillMaxWidth().padding(horizontal = Dim.PagePadding, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(Dim.MinTouch).clickableNoRipple(onBack), contentAlignment = Alignment.Center) {
+            AppIcon(R.drawable.ic_arrow_back, tint = TextMain, contentDescription = "Назад")
+        }
+        Text(title, style = AppType.Title, modifier = Modifier.padding(start = 4.dp))
+    }
 }
 
 /** Файл фотографии цели во внутреннем хранилище. */

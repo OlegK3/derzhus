@@ -55,10 +55,10 @@ class DerzhusWidgetReceiver : GlanceAppWidgetReceiver() {
         DerzhusWidget()
 }
 
-private val WBg = ColorProvider(Color(0xFF0E1513))
-private val WAccent = ColorProvider(Color(0xFF5EEAD4))
-private val WText = ColorProvider(Color(0xFFE6F2EF))
-private val WMuted = ColorProvider(Color(0xFF8AA39C))
+private val WBg = ColorProvider(Color(0xFFFFFFFF))
+private val WAccent = ColorProvider(Color(0xFF168A43))
+private val WText = ColorProvider(Color(0xFF17231D))
+private val WMuted = ColorProvider(Color(0xFF55635B))
 
 @Composable
 private fun WidgetContent(

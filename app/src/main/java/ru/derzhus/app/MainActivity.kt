@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
 /**
  * Дополнительные экраны поверх вкладок кодируются строкой, чтобы пережить поворот экрана:
- * "" — нет, "goal:<id>", "edit:<id>" (пустой id — новая цель), "habit", "craving", "rules".
+ * "" — нет, "goal:<id>", "edit:<id>" (пустой id — новая цель), "habit", "craving", "rules", "stats".
  */
 @Composable
 fun AppRoot(vm: MainVm = viewModel()) {
@@ -139,7 +139,8 @@ fun AppRoot(vm: MainVm = viewModel()) {
                             vm = vm,
                             now = now,
                             onAddHabit = { overlay = "habit" },
-                            onRules = { overlay = "rules" }
+                            onRules = { overlay = "rules" },
+                            onStats = { overlay = "stats" }
                         )
                     }
                 }
@@ -173,6 +174,8 @@ private fun Overlay(vm: MainVm, now: Long, key: String, setOverlay: (String) -> 
         }
 
         key == "rules" -> RulesScreen { setOverlay("") }
+
+        key == "stats" -> StatsScreen(data, now) { setOverlay("") }
 
         key.startsWith("goal:") -> {
             val id = key.removePrefix("goal:")

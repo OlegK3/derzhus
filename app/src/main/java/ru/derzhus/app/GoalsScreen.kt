@@ -16,14 +16,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,18 +61,18 @@ fun GoalsScreen(
     Column(Modifier.fillMaxSize()) {
         ScreenTitle("Цели и мечты") {
             Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Accent).clickable(onClick = onAdd),
+                Modifier.size(Dim.MinTouch).clip(RoundedCornerShape(14.dp)).background(Accent).clickable(onClick = onAdd),
                 contentAlignment = Alignment.Center
-            ) { Icon(Icons.Filled.Add, contentDescription = "Добавить цель", tint = OnAccent) }
+            ) { AppIcon(R.drawable.ic_plus, tint = OnAccent, contentDescription = "Добавить цель") }
         }
-        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.padding(horizontal = Dim.PagePadding), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Pill("Все цели (${data.goals.size})", filter == 0, { filter = 0 })
             Pill("Главная", filter == 1, { filter = 1 })
             Pill("Достигнутые", filter == 2, { filter = 2 })
         }
         LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            contentPadding = PaddingValues(Dim.PagePadding),
+            verticalArrangement = Arrangement.spacedBy(Dim.CardGap),
             modifier = Modifier.fillMaxSize()
         ) {
             if (shown.isEmpty()) {
@@ -141,22 +136,27 @@ private fun GoalCard(
         Box(Modifier.fillMaxWidth().height(150.dp)) {
             GoalImage(g.photos.firstOrNull()?.let { photoFile(ctx, it) }, Modifier.fillMaxSize())
             Box(
-                Modifier.fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
+                Modifier.fillMaxSize().background(
+                    Brush.horizontalGradient(0f to Surface1.copy(alpha = 0.95f), 0.55f to Surface1.copy(alpha = 0.55f), 1f to Color.Transparent)
+                )
             )
             if (g.isMain) {
-                Box(
+                Row(
                     Modifier
                         .align(Alignment.TopStart)
                         .padding(10.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(Color(0xCC16301F))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) { Text("★ Главная цель", color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Medium) }
+                        .background(AccentSoft)
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppIcon(R.drawable.ic_star, tint = AccentDeep, size = 12.dp)
+                    Text(" Главная цель", color = AccentDeep, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
             }
             Box(Modifier.align(Alignment.TopEnd)) {
-                IconButton(onClick = { menu = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "Меню", tint = Color.White)
+                IconButton(onClick = { menu = true }, modifier = Modifier.size(Dim.MinTouch)) {
+                    AppIcon(R.drawable.ic_more, tint = TextMain, contentDescription = "Меню")
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text("Редактировать") }, onClick = { menu = false; onEdit() })
@@ -167,14 +167,14 @@ private fun GoalCard(
                 }
             }
             Column(Modifier.align(Alignment.BottomStart).padding(14.dp)) {
-                Text(g.title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text(Money.rub(g.costKop), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(g.title.uppercase(), color = TextMain, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 2, modifier = Modifier.fillMaxWidth(0.6f))
+                Text(Money.rub(g.costKop), color = TextMain, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             if (g.achieved) {
                 Box(
                     Modifier.align(Alignment.BottomEnd).padding(12.dp).size(32.dp).clip(CircleShape).background(Accent),
                     contentAlignment = Alignment.Center
-                ) { Icon(Icons.Filled.Check, contentDescription = null, tint = OnAccent) }
+                ) { AppIcon(R.drawable.ic_check, tint = OnAccent, size = 20.dp, contentDescription = "Достигнута") }
             }
         }
         Column(Modifier.padding(14.dp)) {

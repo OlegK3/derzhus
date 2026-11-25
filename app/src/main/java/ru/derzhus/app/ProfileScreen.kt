@@ -5,10 +5,10 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,13 +24,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,10 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -59,7 +48,7 @@ private enum class ProfileDialog { None, Name, Calc, Remind, Backup, About }
 
 /** Экран «Профиль»: имя, статистика, настройки расчёта, напоминания, резервная копия. */
 @Composable
-fun ProfileScreen(vm: MainVm, now: Long, onAddHabit: () -> Unit, onRules: () -> Unit) {
+fun ProfileScreen(vm: MainVm, now: Long, onAddHabit: () -> Unit, onRules: () -> Unit, onStats: () -> Unit = {}) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val data = vm.data
@@ -122,14 +111,14 @@ fun ProfileScreen(vm: MainVm, now: Long, onAddHabit: () -> Unit, onRules: () -> 
                     color = Muted, fontSize = 14.sp
                 )
             }
-            IconButton(onClick = { dialog = ProfileDialog.Name }) {
-                Icon(Icons.Outlined.Edit, contentDescription = "Изменить имя", tint = TextMain)
+            Box(Modifier.size(Dim.MinTouch).clickableNoRipple { dialog = ProfileDialog.Name }, contentAlignment = Alignment.Center) {
+                AppIcon(R.drawable.ic_edit, tint = TextMain, contentDescription = "Изменить имя")
             }
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Modifier.fillMaxWidth().padding(Dim.PagePadding),
+            horizontalArrangement = Arrangement.spacedBy(Dim.CardGap)
         ) {
             MiniStat("$days", "${Calc.dayWord(days)} серии", Modifier.weight(1f))
             MiniStat("$xp", "XP · ур. ${Levels.forXp(xp).n}", Modifier.weight(1f))
@@ -138,26 +127,27 @@ fun ProfileScreen(vm: MainVm, now: Long, onAddHabit: () -> Unit, onRules: () -> 
 
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             SettingRow(
-                SettingIcon.Vector(Icons.Outlined.Settings),
+                R.drawable.ic_settings,
                 "Параметры расчёта",
                 if (habit != null) "Расходы на ${habit.name}: ${Money.rub(habit.perDayKop)} / день" else "Привычки и прогноз накоплений"
             ) { dialog = ProfileDialog.Calc }
             SettingRow(
-                SettingIcon.Vector(Icons.Outlined.Notifications),
+                R.drawable.ic_bell,
                 "Напоминания",
                 if (data.settings.remindersOn) "Каждый день в ${data.settings.reminderHour}:00" else "Выключены"
             ) { dialog = ProfileDialog.Remind }
-            SettingRow(SettingIcon.Rules, "Три правила", "Опора на трудные дни") { onRules() }
-            SettingRow(SettingIcon.Cloud, "Резервная копия", "Сохранить или восстановить данные") {
+            SettingRow(R.drawable.ic_chart, "Статистика", "Накопления по неделям, месяцам и годам") { onStats() }
+            SettingRow(R.drawable.ic_list, "Три правила", "Опора на трудные дни") { onRules() }
+            SettingRow(R.drawable.ic_cloud, "Резервная копия", "Сохранить или восстановить данные") {
                 dialog = ProfileDialog.Backup
             }
-            SettingRow(SettingIcon.Export, "Экспорт данных", "Выгрузить прогресс и фото (файл)") {
+            SettingRow(R.drawable.ic_export, "Экспорт данных", "Выгрузить прогресс и фото (файл)") {
                 exportLauncher.launch(backupName())
             }
-            SettingRow(SettingIcon.Import, "Импорт данных", "Загрузить сохранённый файл") {
+            SettingRow(R.drawable.ic_import, "Импорт данных", "Загрузить сохранённый файл") {
                 importLauncher.launch(arrayOf("*/*"))
             }
-            SettingRow(SettingIcon.Vector(Icons.Outlined.Info), "О приложении", "Версия и принципы работы") {
+            SettingRow(R.drawable.ic_info, "О приложении", "Версия и принципы работы") {
                 dialog = ProfileDialog.About
             }
         }
@@ -228,7 +218,7 @@ fun ProfileScreen(vm: MainVm, now: Long, onAddHabit: () -> Unit, onRules: () -> 
             }, Modifier.fillMaxWidth())
         }
 
-        ProfileDialog.About -> AppDialog({ dialog = ProfileDialog.None }, "Держусь") {
+        ProfileDialog.About -> AppDialog({ dialog = ProfileDialog.None }, "Новая жизнь") {
             Text("Счётчик дней без вредных привычек: сигареты, алкоголь, сладкое, соцсети или ваша цель.", color = TextMain, fontSize = 15.sp, lineHeight = 21.sp)
             Text(
                 "Приложение работает без интернета, без регистрации и без сервера. Все данные и фото хранятся только на вашем телефоне. " +
@@ -303,7 +293,7 @@ private fun CalcSettings(vm: MainVm, now: Long, onAddHabit: () -> Unit) {
     )
 
     Spacer(Modifier.height(16.dp))
-    GhostButton("+ Добавить привычку", onAddHabit, Modifier.fillMaxWidth(), color = Accent)
+    GhostButton("Добавить привычку", onAddHabit, Modifier.fillMaxWidth(), color = Accent)
 }
 
 @Composable
@@ -351,66 +341,22 @@ private fun trimNumber(v: Double): String {
 @Composable
 private fun MiniStat(value: String, label: String, modifier: Modifier = Modifier) {
     AppCard(modifier, padding = 12.dp) {
-        Text(value, color = Accent, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        Text(value, color = AccentDeep, fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Text(label, color = Muted, fontSize = 12.sp)
     }
 }
 
-private sealed interface SettingIcon {
-    class Vector(val image: ImageVector) : SettingIcon
-    data object Cloud : SettingIcon
-    data object Export : SettingIcon
-    data object Import : SettingIcon
-    data object Rules : SettingIcon
-}
-
 @Composable
-private fun SettingRow(icon: SettingIcon, title: String, subtitle: String, onClick: () -> Unit) {
-    AppCard(Modifier.fillMaxWidth(), onClick = onClick, padding = 14.dp) {
+private fun SettingRow(@DrawableRes icon: Int, title: String, subtitle: String, onClick: () -> Unit) {
+    AppCard(Modifier.fillMaxWidth(), onClick = onClick, padding = 12.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
-                when (icon) {
-                    is SettingIcon.Vector -> Icon(icon.image, contentDescription = null, tint = Accent, modifier = Modifier.size(24.dp))
-                    else -> LineIcon(icon, Accent)
-                }
-            }
+            IconBadge(icon, size = 40.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, color = TextMain, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Text(subtitle, color = Muted, fontSize = 13.sp)
             }
-            Text("›", color = Muted, fontSize = 22.sp)
-        }
-    }
-}
-
-/** Простые линейные иконки, нарисованные в коде. */
-@Composable
-private fun LineIcon(kind: SettingIcon, tint: Color) {
-    Canvas(Modifier.size(24.dp)) {
-        val w = size.width
-        val h = size.height
-        val sw = 2.dp.toPx()
-        fun line(x1: Float, y1: Float, x2: Float, y2: Float) =
-            drawLine(tint, Offset(w * x1, h * y1), Offset(w * x2, h * y2), strokeWidth = sw, cap = StrokeCap.Round)
-        when (kind) {
-            SettingIcon.Cloud -> {
-                drawArc(tint, 180f, 180f, false, Offset(w * 0.18f, h * 0.3f), androidx.compose.ui.geometry.Size(w * 0.64f, h * 0.5f),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(sw, cap = StrokeCap.Round))
-                line(0.18f, 0.55f, 0.18f, 0.78f); line(0.82f, 0.55f, 0.82f, 0.78f); line(0.18f, 0.78f, 0.82f, 0.78f)
-            }
-            SettingIcon.Export -> {
-                line(0.5f, 0.7f, 0.5f, 0.15f); line(0.5f, 0.15f, 0.3f, 0.35f); line(0.5f, 0.15f, 0.7f, 0.35f)
-                line(0.2f, 0.88f, 0.8f, 0.88f)
-            }
-            SettingIcon.Import -> {
-                line(0.5f, 0.15f, 0.5f, 0.7f); line(0.5f, 0.7f, 0.3f, 0.5f); line(0.5f, 0.7f, 0.7f, 0.5f)
-                line(0.2f, 0.88f, 0.8f, 0.88f)
-            }
-            SettingIcon.Rules -> {
-                line(0.25f, 0.25f, 0.8f, 0.25f); line(0.25f, 0.5f, 0.8f, 0.5f); line(0.25f, 0.75f, 0.8f, 0.75f)
-            }
-            is SettingIcon.Vector -> Unit
+            AppIcon(R.drawable.ic_chevron_right, tint = Muted)
         }
     }
 }

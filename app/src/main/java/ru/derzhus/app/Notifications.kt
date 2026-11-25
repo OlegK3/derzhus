@@ -89,7 +89,7 @@ class MorningWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
             // Награда, которую получили именно сегодня
             val fresh = Game.dayAwards.firstOrNull { it.threshold == d && d > 0 }
             val praise = Praise.daily(h, now)
-            val text = if (fresh != null) "Новая награда: ${fresh.icon} ${fresh.title}. $praise" else praise
+            val text = if (fresh != null) "Новая награда: ${fresh.title}. $praise" else praise
             Notifier.post(ctx, index + 1, title, text)
         }
 

@@ -1,5 +1,7 @@
 package ru.derzhus.app
 
+import androidx.annotation.DrawableRes
+
 data class LevelInfo(val n: Int, val name: String, val fromXp: Int)
 
 object Levels {
@@ -28,7 +30,7 @@ enum class AwardKind { DAYS, MONEY, GOAL }
 
 data class Award(
     val id: String,
-    val icon: String,
+    @DrawableRes val icon: Int,
     val title: String,
     val desc: String,
     val xp: Int,
@@ -42,26 +44,26 @@ data class Award(
  */
 object Game {
     val dayAwards = listOf(
-        Award("d1", "👣", "Первый шаг", "1 день", 10, AwardKind.DAYS, 1),
-        Award("d3", "🌱", "Закрепился", "3 дня", 15, AwardKind.DAYS, 3),
-        Award("d7", "🔥", "Неделя", "7 дней", 30, AwardKind.DAYS, 7),
-        Award("d14", "⚡", "Две недели", "14 дней", 40, AwardKind.DAYS, 14),
-        Award("d30", "⛰️", "Вершина", "30 дней", 60, AwardKind.DAYS, 30),
-        Award("d60", "🧭", "Новый курс", "60 дней", 90, AwardKind.DAYS, 60),
-        Award("d90", "👑", "Свобода", "90 дней", 120, AwardKind.DAYS, 90),
-        Award("d180", "🌅", "Полгода", "180 дней", 160, AwardKind.DAYS, 180),
-        Award("d365", "🏆", "Новая глава", "365 дней", 250, AwardKind.DAYS, 365)
+        Award("d1", R.drawable.ic_aw_steps, "Первый шаг", "1 день", 10, AwardKind.DAYS, 1),
+        Award("d3", R.drawable.ic_aw_sprout, "Закрепился", "3 дня", 15, AwardKind.DAYS, 3),
+        Award("d7", R.drawable.ic_aw_flame, "Неделя", "7 дней", 30, AwardKind.DAYS, 7),
+        Award("d14", R.drawable.ic_aw_bolt, "Две недели", "14 дней", 40, AwardKind.DAYS, 14),
+        Award("d30", R.drawable.ic_mountain, "Вершина", "30 дней", 60, AwardKind.DAYS, 30),
+        Award("d60", R.drawable.ic_aw_compass, "Новый курс", "60 дней", 90, AwardKind.DAYS, 60),
+        Award("d90", R.drawable.ic_aw_crown, "Свобода", "90 дней", 120, AwardKind.DAYS, 90),
+        Award("d180", R.drawable.ic_aw_sunrise, "Полгода", "180 дней", 160, AwardKind.DAYS, 180),
+        Award("d365", R.drawable.ic_aw_trophy, "Новая глава", "365 дней", 250, AwardKind.DAYS, 365)
     )
 
     val moneyAwards = listOf(
-        Award("m1000", "💵", "Первая тысяча", "отложено 1 000 ₽", 20, AwardKind.MONEY, 100_000),
-        Award("m10000", "💰", "Десятка", "отложено 10 000 ₽", 40, AwardKind.MONEY, 1_000_000),
-        Award("m50000", "🏦", "Полтинник", "отложено 50 000 ₽", 80, AwardKind.MONEY, 5_000_000),
-        Award("m100000", "💎", "Сотка", "отложено 100 000 ₽", 150, AwardKind.MONEY, 10_000_000)
+        Award("m1000", R.drawable.ic_aw_banknote, "Первая тысяча", "отложено 1 000 ₽", 20, AwardKind.MONEY, 100_000),
+        Award("m10000", R.drawable.ic_coins, "Десятка", "отложено 10 000 ₽", 40, AwardKind.MONEY, 1_000_000),
+        Award("m50000", R.drawable.ic_aw_bank, "Полтинник", "отложено 50 000 ₽", 80, AwardKind.MONEY, 5_000_000),
+        Award("m100000", R.drawable.ic_aw_gem, "Сотка", "отложено 100 000 ₽", 150, AwardKind.MONEY, 10_000_000)
     )
 
     val goalAwards = listOf(
-        Award("g1", "🎯", "Мечта сбылась", "достигнута первая цель", 100, AwardKind.GOAL, 1)
+        Award("g1", R.drawable.ic_aw_target, "Мечта сбылась", "достигнута первая цель", 100, AwardKind.GOAL, 1)
     )
 
     val awards: List<Award> = dayAwards + moneyAwards + goalAwards

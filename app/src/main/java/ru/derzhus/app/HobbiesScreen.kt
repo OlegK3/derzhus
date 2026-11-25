@@ -1,5 +1,6 @@
 package ru.derzhus.app
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,9 +30,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -39,38 +43,43 @@ fun HobbiesScreen(data: AppData, onToggle: (String) -> Unit) {
     var group by rememberSaveable { mutableStateOf("Все") }
     var open by remember { mutableStateOf<Hobby?>(null) }
     val shown = if (group == "Все") Hobbies.all else Hobbies.all.filter { it.group == group }
+    val ideaOfDay = Hobbies.all[(System.currentTimeMillis() / 86_400_000L % Hobbies.all.size).toInt()]
 
     Column(Modifier.fillMaxSize()) {
-        Text("Увлечения", color = TextMain, fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 14.dp))
+        ScreenTitle("Увлечения")
         Text(
             "Идеи, на что потратить время и деньги вместо привычки",
-            color = Muted, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            style = AppType.BodyMuted, modifier = Modifier.padding(horizontal = Dim.PagePadding)
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            contentPadding = PaddingValues(horizontal = Dim.PagePadding, vertical = 10.dp)
         ) {
             items(Hobbies.groups) { g -> Pill(g, g == group, { group = g }) }
         }
         LazyColumn(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(Dim.PagePadding),
+            verticalArrangement = Arrangement.spacedBy(Dim.CardGap),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(shown, key = { it.id }) { h ->
-                AppCard(Modifier.fillMaxWidth(), onClick = { open = h }, padding = 10.dp) {
+            items(shown.chunked(3)) { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Dim.CardGap)) {
+                    row.forEach { h ->
+                        HobbyTile(h, h.id in data.settings.interests, Modifier.weight(1f)) { open = h }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+            item {
+                AppCard(Modifier.fillMaxWidth(), onClick = { open = ideaOfDay }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        HobbyThumb(h, Modifier.size(width = 84.dp, height = 72.dp))
+                        IconBadge(R.drawable.ic_leaf)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(h.title, color = TextMain, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                            Text(h.blurb, color = Muted, fontSize = 13.sp, lineHeight = 17.sp)
+                            Text("Идея на сегодня", style = AppType.Section)
+                            Text("Чем заняться, если накатывает тяга?", style = AppType.Caption)
                         }
-                        Text(
-                            if (h.id in data.settings.interests) "★" else "›",
-                            color = if (h.id in data.settings.interests) Gold else Muted,
-                            fontSize = 22.sp
-                        )
+                        AppIcon(R.drawable.ic_chevron_right, tint = Muted)
                     }
                 }
             }
@@ -81,19 +90,19 @@ fun HobbiesScreen(data: AppData, onToggle: (String) -> Unit) {
     if (hobby != null) {
         val interested = hobby.id in data.settings.interests
         AppDialog({ open = null }, hobby.title) {
-            HobbyThumb(hobby, Modifier.fillMaxWidth().height(140.dp), big = true)
+            HobbyPicture(hobby, Modifier.fillMaxWidth().height(160.dp), 18.dp)
             Text(hobby.about, color = TextMain, fontSize = 15.sp, lineHeight = 22.sp, modifier = Modifier.padding(top = 14.dp))
             Text("Идеи для начала", color = Accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
             hobby.ideas.forEach { idea ->
-                Row(Modifier.padding(vertical = 3.dp)) {
-                    Text("•", color = Accent, fontSize = 15.sp)
-                    Spacer(Modifier.width(8.dp))
+                Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
+                    Box(Modifier.padding(top = 8.dp).size(6.dp).clip(CircleShape).background(Accent))
+                    Spacer(Modifier.width(10.dp))
                     Text(idea, color = Muted, fontSize = 14.sp, lineHeight = 20.sp)
                 }
             }
             Spacer(Modifier.height(16.dp))
             if (interested) {
-                GhostButton("★ В интересных, убрать", onClick = { onToggle(hobby.id) }, modifier = Modifier.fillMaxWidth())
+                GhostButton("В интересных, убрать", onClick = { onToggle(hobby.id) }, modifier = Modifier.fillMaxWidth())
             } else {
                 PrimaryButton("Мне интересно", onClick = { onToggle(hobby.id) }, modifier = Modifier.fillMaxWidth())
             }
@@ -101,15 +110,38 @@ fun HobbiesScreen(data: AppData, onToggle: (String) -> Unit) {
     }
 }
 
-/** Иллюстрация занятия: градиент и крупный значок (без загрузки из интернета). */
+/** Плитка занятия: фото (или значок на мягком зелёном) и подпись под ним. */
 @Composable
-private fun HobbyThumb(h: Hobby, modifier: Modifier, big: Boolean = false) {
-    Box(
-        modifier
-            .clip(RoundedCornerShape(if (big) 18.dp else 14.dp))
-            .background(Brush.linearGradient(listOf(Color(h.color1), Color(h.color2)))),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(h.emoji, fontSize = if (big) 64.sp else 34.sp)
+private fun HobbyTile(h: Hobby, interested: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    AppCard(modifier, onClick = onClick, padding = 6.dp) {
+        Box {
+            HobbyPicture(h, Modifier.fillMaxWidth().aspectRatio(0.85f), 14.dp)
+            if (interested) {
+                Box(
+                    Modifier.align(Alignment.TopEnd).padding(4.dp).size(22.dp).clip(CircleShape).background(Accent),
+                    contentAlignment = Alignment.Center
+                ) { AppIcon(R.drawable.ic_check, tint = OnAccent, size = 14.dp, contentDescription = "В интересных") }
+            }
+        }
+        Text(
+            h.title, style = AppType.Body.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.sp),
+            textAlign = TextAlign.Center, maxLines = 2,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp)
+        )
+    }
+}
+
+@Composable
+private fun HobbyPicture(h: Hobby, modifier: Modifier, radius: androidx.compose.ui.unit.Dp) {
+    val shape = RoundedCornerShape(radius)
+    if (h.photo != null) {
+        Image(
+            painterResource(h.photo), contentDescription = h.title,
+            contentScale = ContentScale.Crop, modifier = modifier.clip(shape)
+        )
+    } else {
+        Box(modifier.clip(shape).background(AccentSoft), contentAlignment = Alignment.Center) {
+            AppIcon(h.icon, tint = AccentDeep, size = 40.dp, contentDescription = h.title)
+        }
     }
 }
