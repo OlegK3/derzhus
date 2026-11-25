@@ -59,6 +59,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -231,7 +232,8 @@ fun AppField(
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
     placeholder: String? = null,
-    error: Boolean = false
+    error: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None
 ) {
     Column(modifier) {
         Text(label, color = Muted, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
@@ -240,6 +242,7 @@ fun AppField(
             onValueChange = onValueChange,
             singleLine = singleLine,
             isError = error,
+            visualTransformation = visualTransformation,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),

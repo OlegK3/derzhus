@@ -16,7 +16,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -49,7 +54,17 @@ object Photos {
     @DrawableRes val motorcycle = R.drawable.photo_motorcycle
     @DrawableRes val boat = R.drawable.photo_boat
     @DrawableRes val diving = R.drawable.photo_diving
-    @DrawableRes val hiking = R.drawable.photo_hiking
+    @DrawableRes val hiking = R.drawable.hobby_hiking
+    @DrawableRes val support = R.drawable.bg_support_sunrise
+    @DrawableRes val widgetForest = R.drawable.bg_widget_forest
+    @DrawableRes val photography = R.drawable.hobby_photography
+    @DrawableRes val cycling = R.drawable.hobby_cycling
+    @DrawableRes val music = R.drawable.hobby_music
+    @DrawableRes val fitness = R.drawable.hobby_fitness
+    @DrawableRes val creativity = R.drawable.hobby_creativity
+    @DrawableRes val reading = R.drawable.hobby_reading
+    @DrawableRes val cooking = R.drawable.hobby_cooking
+    @DrawableRes val volunteering = R.drawable.hobby_volunteering
 }
 
 /** Единая векторная иконка из набора комплекта; цвет задаётся tint. */
@@ -116,4 +131,51 @@ fun PhotoBackdrop(
             )
         }
     }
+}
+
+/** Группировка тысяч при вводе суммы: в поле хранится «чистое» значение, пробелы только в показе. */
+object MoneyVisual : VisualTransformation {
+    private const val NB = ' '
+
+    override fun filter(text: AnnotatedString): TransformedText {
+        val raw = text.text
+        val comma = raw.indexOf(',')
+        val n = if (comma >= 0) comma else raw.length
+        val out = StringBuilder()
+        val origin = ArrayList<Int>()
+        val toTransformed = IntArray(raw.length + 1)
+        for (i in raw.indices) {
+            if (i in 1 until n && (n - i) % 3 == 0) {
+                out.append(NB)
+                origin.add(i)
+            }
+            toTransformed[i] = out.length
+            out.append(raw[i])
+            origin.add(i)
+        }
+        toTransformed[raw.length] = out.length
+        origin.add(raw.length)
+        val mapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int) = toTransformed[offset.coerceIn(0, raw.length)]
+            override fun transformedToOriginal(offset: Int) = origin[offset.coerceIn(0, origin.size - 1)]
+        }
+        return TransformedText(AnnotatedString(out.toString()), mapping)
+    }
+}
+
+/** Поле суммы в рублях: цифровая клавиатура, фильтр ввода и вставки, группировка тысяч. */
+@Composable
+fun AmountField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    error: Boolean = false
+) {
+    AppField(
+        label, value, { onValueChange(Money.sanitize(it)) }, modifier,
+        suffix = "₽", keyboardType = KeyboardType.Decimal, placeholder = placeholder, error = error,
+        visualTransformation = MoneyVisual
+    )
 }

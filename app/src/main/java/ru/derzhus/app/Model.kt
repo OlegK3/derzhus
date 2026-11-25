@@ -66,7 +66,9 @@ data class Settings(
     val customPaceKop: Long = 0L,
     val remindersOn: Boolean = true,
     val reminderHour: Int = 9,
-    val interests: Set<String> = emptySet()
+    val interests: Set<String> = emptySet(),
+    val distraction: String = "",            // личный способ отвлечься (только на устройстве)
+    val distractionAsked: Boolean = false     // шаг «Что поможет отвлечься?» пройден или пропущен
 )
 
 data class AppData(

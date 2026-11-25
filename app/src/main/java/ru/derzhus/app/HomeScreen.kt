@@ -52,7 +52,6 @@ fun HomeScreen(
     onOpenGoal: (String) -> Unit,
     onAddGoal: () -> Unit,
     onCraving: () -> Unit,
-    onRules: () -> Unit,
     onRelapse: (Habit) -> Unit,
     onOpenAwards: () -> Unit,
     onOpenGoals: () -> Unit,
@@ -176,8 +175,7 @@ fun HomeScreen(
                 Modifier.fillMaxWidth().padding(horizontal = Dim.PagePadding).padding(top = Dim.CardGap),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                GhostButton("Тянет? Помощь", onClick = onCraving, modifier = Modifier.weight(1f))
-                GhostButton("Три правила", onClick = onRules, modifier = Modifier.weight(1f))
+                PrimaryButton("Тянет? Нужна помощь", onClick = onCraving, modifier = Modifier.weight(1f))
             }
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 TextButton(onClick = { askRelapse = true }) { Text("Сорвался", color = Muted) }

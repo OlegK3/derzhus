@@ -35,6 +35,34 @@ object Money {
         }
     }
 
+    /**
+     * Очистка вводимой суммы: только цифры и одна запятая (точка превращается в запятую),
+     * до 2 знаков после запятой, до 9 цифр в целой части (защита от переполнения),
+     * без ведущих нулей. Пробелы и любые другие символы (в том числе из буфера) отбрасываются.
+     */
+    fun sanitize(input: String): String {
+        val sb = StringBuilder()
+        var comma = false
+        var intDigits = 0
+        var dec = 0
+        for (c in input) {
+            when {
+                c in '0'..'9' -> if (comma) {
+                    if (dec < 2) { sb.append(c); dec++ }
+                } else if (intDigits < 9) {
+                    sb.append(c); intDigits++
+                }
+                (c == ',' || c == '.') && !comma -> {
+                    comma = true
+                    if (sb.isEmpty()) sb.append('0')
+                    sb.append(',')
+                }
+            }
+        }
+        while (sb.length > 1 && sb[0] == '0' && sb[1] != ',') sb.deleteCharAt(0)
+        return sb.toString()
+    }
+
     /** Для подстановки в поле ввода. */
     fun edit(kop: Long): String {
         val r = kop / 100

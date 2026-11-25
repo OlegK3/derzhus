@@ -54,7 +54,7 @@ fun GoalEditScreen(vm: MainVm, goalId: String?, onClose: () -> Unit) {
 
     var title by remember { mutableStateOf(existing?.title ?: "") }
     var cost by remember { mutableStateOf(if (existing != null) Money.edit(existing.costKop) else "") }
-    var saved by remember { mutableStateOf(if (existing != null) Money.edit(existing.savedKop) else "0") }
+    var saved by remember { mutableStateOf(if (existing != null) Money.edit(existing.savedKop) else "") }
     var main by remember { mutableStateOf(existing?.isMain ?: vm.data.goals.none { it.isMain }) }
     var note by remember { mutableStateOf(existing?.note ?: "") }
     var more by remember { mutableStateOf(note.isNotBlank()) }
@@ -74,7 +74,7 @@ fun GoalEditScreen(vm: MainVm, goalId: String?, onClose: () -> Unit) {
     val pickPhotos = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 
     val costKop = Money.parse(cost)
-    val savedKop = Money.parse(saved)
+    val savedKop = if (saved.isBlank()) 0L else Money.parse(saved)
     val titleOk = title.isNotBlank()
     val costOk = costKop != null && costKop > 0
     val savedOk = savedKop != null
@@ -158,9 +158,9 @@ fun GoalEditScreen(vm: MainVm, goalId: String?, onClose: () -> Unit) {
             Spacer(Modifier.height(16.dp))
             AppField("Название цели", title, { title = it }, Modifier.fillMaxWidth(), placeholder = "Например: Мотоцикл мечты", error = touched && !titleOk)
             Spacer(Modifier.height(12.dp))
-            AppField("Стоимость", cost, { cost = it }, Modifier.fillMaxWidth(), suffix = "₽", keyboardType = KeyboardType.Decimal, error = touched && !costOk)
+            AmountField("Стоимость", cost, { cost = it }, Modifier.fillMaxWidth(), placeholder = "Например, 50 000 ₽", error = touched && !costOk)
             Spacer(Modifier.height(12.dp))
-            AppField("Уже накоплено (фактически)", saved, { saved = it }, Modifier.fillMaxWidth(), suffix = "₽", keyboardType = KeyboardType.Decimal, error = touched && !savedOk)
+            AmountField("Уже накоплено (фактически)", saved, { saved = it }, Modifier.fillMaxWidth(), placeholder = "0", error = touched && !savedOk)
             if (existing != null) {
                 Text(
                     "Если изменить сумму, в истории появится корректировка.",

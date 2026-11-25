@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
 
 /**
  * Дополнительные экраны поверх вкладок кодируются строкой, чтобы пережить поворот экрана:
- * "" — нет, "goal:<id>", "edit:<id>" (пустой id — новая цель), "habit", "craving", "rules", "stats".
+ * "" — нет, "goal:<id>", "edit:<id>" (пустой id — новая цель), "habit", "craving", "stats".
  */
 @Composable
 fun AppRoot(vm: MainVm = viewModel()) {
@@ -102,6 +102,14 @@ fun AppRoot(vm: MainVm = viewModel()) {
                 AddHabitScreen(canCancel = false, onCancel = {}, onSave = { vm.addHabit(it) })
             }
 
+            // Один раз после первой привычки (и один раз для тех, кто обновился): необязательный шаг
+            !data.settings.distractionAsked -> Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                DistractionStepScreen(
+                    onContinue = { text -> vm.updateSettings { it.copy(distraction = text.trim(), distractionAsked = true) } },
+                    onSkip = { vm.updateSettings { it.copy(distractionAsked = true) } }
+                )
+            }
+
             overlay.isNotEmpty() -> Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                 Overlay(vm, now, overlay) { overlay = it }
             }
@@ -117,7 +125,6 @@ fun AppRoot(vm: MainVm = viewModel()) {
                             onOpenGoal = { overlay = "goal:$it" },
                             onAddGoal = { overlay = "edit:" },
                             onCraving = { overlay = "craving" },
-                            onRules = { overlay = "rules" },
                             onRelapse = { vm.relapse(it.id) },
                             onOpenAwards = { tab = MainTab.Awards },
                             onOpenGoals = { tab = MainTab.Goals },
@@ -139,7 +146,6 @@ fun AppRoot(vm: MainVm = viewModel()) {
                             vm = vm,
                             now = now,
                             onAddHabit = { overlay = "habit" },
-                            onRules = { overlay = "rules" },
                             onStats = { overlay = "stats" }
                         )
                     }
@@ -170,10 +176,8 @@ private fun Overlay(vm: MainVm, now: Long, key: String, setOverlay: (String) -> 
 
         key == "craving" -> {
             val habit = data.mainHabit
-            if (habit != null) CravingScreen(habit, now) { setOverlay("") } else CloseOverlay(setOverlay)
+            if (habit != null) CravingScreen(habit, now, data.settings.distraction) { setOverlay("") } else CloseOverlay(setOverlay)
         }
-
-        key == "rules" -> RulesScreen { setOverlay("") }
 
         key == "stats" -> StatsScreen(data, now) { setOverlay("") }
 

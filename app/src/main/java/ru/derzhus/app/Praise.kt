@@ -47,6 +47,24 @@ object Praise {
 
     fun support(step: Int): String = support[step.mod(support.size)]
 
+    /** Короткие поддерживающие советы для кнопки помощи (без медицинских обещаний). */
+    val tips = listOf(
+        "Попробуй переключиться на короткую прогулку.",
+        "Можно отложить решение на несколько минут.",
+        "Если трудно, поговори с человеком, которому доверяешь.",
+        "Сосредоточься на одном небольшом действии сейчас.",
+        "Вспомни, ради чего ты начал.",
+        "Выпей стакан воды и сделай несколько медленных вдохов."
+    )
+
+    /** Индекс следующего совета: никогда не равен предыдущему (если советов больше одного). */
+    fun nextTip(prev: Int, random: kotlin.random.Random = kotlin.random.Random): Int {
+        if (tips.size < 2) return 0
+        var i = random.nextInt(tips.size - 1)
+        if (prev in 0 until tips.size && i >= prev) i++
+        return i
+    }
+
     private val tags = listOf(
         "Ты на верном пути!",
         "Так держать!",

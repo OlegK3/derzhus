@@ -42,6 +42,8 @@ object Json {
                 .put("remindersOn", s.remindersOn)
                 .put("reminderHour", s.reminderHour)
                 .put("interests", JSONArray(s.interests.toList()))
+                .put("distraction", s.distraction)
+                .put("distractionAsked", s.distractionAsked)
         )
         val u = JSONObject()
         d.unlocked.forEach { (k, v) -> u.put(k, v) }
@@ -125,7 +127,9 @@ object Json {
             customPaceKop = so.optLong("customPaceKop", 0L),
             remindersOn = so.optBoolean("remindersOn", true),
             reminderHour = so.optInt("reminderHour", 9),
-            interests = so.optJSONArray("interests")?.strs()?.toSet() ?: emptySet()
+            interests = so.optJSONArray("interests")?.strs()?.toSet() ?: emptySet(),
+            distraction = so.optString("distraction", ""),
+            distractionAsked = so.optBoolean("distractionAsked", false)
         )
         val uo = o.optJSONObject("unlocked")
         val unlocked: Map<String, Long> =
@@ -296,4 +300,5 @@ class Repo(private val ctx: Context) {
 object Store {
     fun load(ctx: Context): List<Habit> = Repo(ctx).load().habits
     fun main(ctx: Context): Habit? = Repo(ctx).load().mainHabit
+    fun data(ctx: Context): AppData = Repo(ctx).load()
 }

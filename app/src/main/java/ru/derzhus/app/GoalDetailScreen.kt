@@ -323,7 +323,7 @@ fun SavingsDialog(
         }
         if (tab == 0) {
             val kop = Money.parse(amount)
-            AppField("Сумма", amount, { amount = it }, Modifier.fillMaxWidth(), suffix = "₽", keyboardType = KeyboardType.Decimal)
+            AmountField("Сумма", amount, { amount = it }, Modifier.fillMaxWidth(), placeholder = "Например, 1 000 ₽")
             Spacer(Modifier.height(10.dp))
             AppField("Комментарий (необязательно)", comment, { comment = it }, Modifier.fillMaxWidth(), placeholder = "Отложил с зарплаты")
             Spacer(Modifier.height(10.dp))
@@ -348,9 +348,9 @@ fun SavingsDialog(
             val ok = title.isNotBlank() && costKop != null && costKop > 0 && savedKop != null
             AppField("Название цели", title, { title = it }, Modifier.fillMaxWidth())
             Spacer(Modifier.height(10.dp))
-            AppField("Стоимость", cost, { cost = it }, Modifier.fillMaxWidth(), suffix = "₽", keyboardType = KeyboardType.Decimal, error = costKop == null || costKop <= 0)
+            AmountField("Стоимость", cost, { cost = it }, Modifier.fillMaxWidth(), placeholder = "Например, 50 000 ₽", error = costKop == null || costKop <= 0)
             Spacer(Modifier.height(10.dp))
-            AppField("Накоплено фактически (корректировка)", saved, { saved = it }, Modifier.fillMaxWidth(), suffix = "₽", keyboardType = KeyboardType.Decimal, error = savedKop == null)
+            AmountField("Накоплено фактически (корректировка)", saved, { saved = it }, Modifier.fillMaxWidth(), error = savedKop == null)
             Text(
                 "Изменение суммы запишется в историю как корректировка.",
                 color = Muted, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)

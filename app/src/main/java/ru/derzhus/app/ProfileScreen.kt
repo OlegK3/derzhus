@@ -44,11 +44,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class ProfileDialog { None, Name, Calc, Remind, Backup, About }
+private enum class ProfileDialog { None, Name, Calc, Remind, Backup, About, Distraction }
 
 /** Экран «Профиль»: имя, статистика, настройки расчёта, напоминания, резервная копия. */
 @Composable
-fun ProfileScreen(vm: MainVm, now: Long, onAddHabit: () -> Unit, onRules: () -> Unit, onStats: () -> Unit = {}) {
+fun ProfileScreen(vm: MainVm, now: Long, onAddHabit: () -> Unit, onStats: () -> Unit = {}) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val data = vm.data
@@ -137,7 +137,10 @@ fun ProfileScreen(vm: MainVm, now: Long, onAddHabit: () -> Unit, onRules: () -> 
                 if (data.settings.remindersOn) "Каждый день в ${data.settings.reminderHour}:00" else "Выключены"
             ) { dialog = ProfileDialog.Remind }
             SettingRow(R.drawable.ic_chart, "Статистика", "Накопления по неделям, месяцам и годам") { onStats() }
-            SettingRow(R.drawable.ic_list, "Три правила", "Опора на трудные дни") { onRules() }
+            SettingRow(
+                R.drawable.ic_list, "Мой способ отвлечься",
+                data.settings.distraction.ifBlank { "Не задан. Нажми, чтобы добавить" }.replace('\n', ' ')
+            ) { dialog = ProfileDialog.Distraction }
             SettingRow(R.drawable.ic_cloud, "Резервная копия", "Сохранить или восстановить данные") {
                 dialog = ProfileDialog.Backup
             }
@@ -226,6 +229,34 @@ fun ProfileScreen(vm: MainVm, now: Long, onAddHabit: () -> Unit, onRules: () -> 
                 color = Muted, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 10.dp)
             )
             Text("Версия 2.0 · ru.derzhus.app", color = Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 14.dp))
+        }
+
+        ProfileDialog.Distraction -> {
+            var text by remember { mutableStateOf(data.settings.distraction) }
+            AppDialog({ dialog = ProfileDialog.None }, "Мой способ отвлечься") {
+                Text(
+                    "Показывается в разделе «Тянет? Нужна помощь». Хранится только на этом телефоне.",
+                    style = AppType.Caption
+                )
+                Spacer(Modifier.height(10.dp))
+                AppField(
+                    "Что помогает отвлечься", text, { text = it.take(DISTRACTION_MAX) },
+                    Modifier.fillMaxWidth(), singleLine = false,
+                    placeholder = "Например, прогуляться, позвонить другу, послушать музыку…"
+                )
+                Spacer(Modifier.height(16.dp))
+                PrimaryButton("Сохранить", {
+                    vm.updateSettings { it.copy(distraction = text.trim(), distractionAsked = true) }
+                    dialog = ProfileDialog.None
+                }, Modifier.fillMaxWidth())
+                if (data.settings.distraction.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    GhostButton("Удалить запись", {
+                        vm.updateSettings { it.copy(distraction = "") }
+                        dialog = ProfileDialog.None
+                    }, Modifier.fillMaxWidth(), color = Danger)
+                }
+            }
         }
 
         ProfileDialog.None -> Unit

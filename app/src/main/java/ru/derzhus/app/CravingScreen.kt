@@ -12,6 +12,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,14 +34,19 @@ import androidx.compose.ui.unit.sp
 
 private const val CYCLES = 5
 
-/** Помощь при тяге: дыхание 4 секунды вдох, 6 секунд выдох, 5 раз (около 50 секунд). */
+/**
+ * «Тянет? Нужна помощь»: личная запись пользователя (или случайный совет с кнопкой «Другой совет»)
+ * и дыхание 4 секунды вдох, 6 секунд выдох, 5 раз (около 50 секунд).
+ */
 @Composable
-fun CravingScreen(habit: Habit, now: Long, onClose: () -> Unit) {
+fun CravingScreen(habit: Habit, now: Long, distraction: String, onClose: () -> Unit) {
     val scale = remember { Animatable(0.55f) }
     var phase by remember { mutableStateOf("Приготовься") }
     var cycle by remember { mutableIntStateOf(0) }
     var run by remember { mutableIntStateOf(0) }
+    var tip by rememberSaveable { mutableIntStateOf(Praise.nextTip(-1)) }
     val done = cycle >= CYCLES
+    val own = distraction.trim()
 
     LaunchedEffect(run) {
         cycle = 0
@@ -51,44 +61,65 @@ fun CravingScreen(habit: Habit, now: Long, onClose: () -> Unit) {
         phase = "Ты справился"
     }
 
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Тянет — это нормально", color = TextMain, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text(
-            "Дыши вместе с кругом. Обычно тяга стихает за несколько минут.",
-            color = Muted, fontSize = 15.sp, textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.size(280.dp)) {
-                val r = size.minDimension / 2
-                drawCircle(Accent.copy(alpha = 0.12f), radius = r)
-                drawCircle(Accent.copy(alpha = 0.55f), radius = r * scale.value)
-            }
-            Text(phase, color = TextMain, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Box(Modifier.fillMaxWidth()) {
+            PhotoBackdrop(Photos.support, Modifier.fillMaxWidth().height(170.dp), fadeTop = true, fadeBottom = true)
+            BackHeader("Тянет? Нужна помощь", onClose)
         }
-
-        Text(
-            if (done) "Ты держишься уже ${Calc.duration(Calc.elapsed(habit, now))}. Это стоит сохранить."
-            else Praise.support(cycle),
-            color = TextMain, fontSize = 17.sp, textAlign = TextAlign.Center, lineHeight = 24.sp
-        )
-        if (habit.perDayKop > 0) {
-            Text(
-                "Уже сэкономлено ${Money.rub(Calc.savedKop(habit, now))}",
-                color = Muted, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp)
-            )
-        }
-
-        Row(
-            Modifier.padding(top = 20.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Column(
+            Modifier.padding(horizontal = Dim.PagePadding),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            GhostButton("Ещё раз", onClick = { run++ }, modifier = Modifier.weight(1f))
-            PrimaryButton("Мне лучше", onClick = onClose, modifier = Modifier.weight(1f))
+            AppCard(Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AppIcon(R.drawable.ic_leaf, tint = Accent)
+                    Text(
+                        if (own.isNotEmpty()) "  Твой способ отвлечься" else "  Совет на сейчас",
+                        style = AppType.Section
+                    )
+                }
+                Text(
+                    if (own.isNotEmpty()) own else Praise.tips[tip],
+                    style = AppType.Body.copy(fontSize = 17.sp, lineHeight = 25.sp),
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+            if (own.isEmpty()) {
+                Spacer(Modifier.height(Dim.CardGap))
+                GhostButton("Другой совет", onClick = { tip = Praise.nextTip(tip) }, modifier = Modifier.fillMaxWidth())
+            }
+
+            Text(
+                "Дыши вместе с кругом. Обычно тяга стихает за несколько минут.",
+                style = AppType.BodyMuted, textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 20.dp)
+            )
+            Box(Modifier.fillMaxWidth().height(230.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.size(200.dp)) {
+                    val r = size.minDimension / 2
+                    drawCircle(Accent.copy(alpha = 0.12f), radius = r)
+                    drawCircle(Accent.copy(alpha = 0.55f), radius = r * scale.value)
+                }
+                Text(phase, color = TextMain, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+            }
+            Text(
+                if (done) "Ты держишься уже ${Calc.duration(Calc.elapsed(habit, now))}. Это стоит сохранить."
+                else Praise.support(cycle),
+                color = TextMain, fontSize = 16.sp, textAlign = TextAlign.Center, lineHeight = 23.sp
+            )
+            if (habit.perDayKop > 0) {
+                Text(
+                    "Уже сэкономлено ${Money.rub(Calc.savedKop(habit, now))}",
+                    style = AppType.BodyMuted, modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+            Row(
+                Modifier.padding(top = 20.dp, bottom = Dim.PagePadding).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                GhostButton("Дыхание ещё раз", onClick = { run++ }, modifier = Modifier.weight(1f))
+                PrimaryButton("Понятно, справлюсь!", onClick = onClose, modifier = Modifier.weight(1f))
+            }
         }
     }
 }

@@ -15,9 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -25,7 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,9 +40,7 @@ import androidx.compose.ui.unit.sp
 /** Экран «Увлечения»: занятия вместо привычки. Работает полностью офлайн. */
 @Composable
 fun HobbiesScreen(data: AppData, onToggle: (String) -> Unit) {
-    var group by rememberSaveable { mutableStateOf("Все") }
     var open by remember { mutableStateOf<Hobby?>(null) }
-    val shown = if (group == "Все") Hobbies.all else Hobbies.all.filter { it.group == group }
     val ideaOfDay = Hobbies.all[(System.currentTimeMillis() / 86_400_000L % Hobbies.all.size).toInt()]
 
     Column(Modifier.fillMaxSize()) {
@@ -51,26 +49,17 @@ fun HobbiesScreen(data: AppData, onToggle: (String) -> Unit) {
             "Идеи, на что потратить время и деньги вместо привычки",
             style = AppType.BodyMuted, modifier = Modifier.padding(horizontal = Dim.PagePadding)
         )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = Dim.PagePadding, vertical = 10.dp)
-        ) {
-            items(Hobbies.groups) { g -> Pill(g, g == group, { group = g }) }
-        }
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 104.dp),
             contentPadding = PaddingValues(Dim.PagePadding),
+            horizontalArrangement = Arrangement.spacedBy(Dim.CardGap),
             verticalArrangement = Arrangement.spacedBy(Dim.CardGap),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(shown.chunked(3)) { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Dim.CardGap)) {
-                    row.forEach { h ->
-                        HobbyTile(h, h.id in data.settings.interests, Modifier.weight(1f)) { open = h }
-                    }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                }
+            items(Hobbies.all, key = { it.id }) { h ->
+                HobbyTile(h, h.id in data.settings.interests, Modifier) { open = h }
             }
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 AppCard(Modifier.fillMaxWidth(), onClick = { open = ideaOfDay }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconBadge(R.drawable.ic_leaf)

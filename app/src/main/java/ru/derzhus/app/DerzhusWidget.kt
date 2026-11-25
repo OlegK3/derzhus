@@ -11,6 +11,15 @@ import androidx.compose.ui.unit.sp
 
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.LocalSize
+import androidx.glance.appwidget.LinearProgressIndicator
+import androidx.glance.appwidget.SizeMode
+import androidx.glance.layout.Box
+import androidx.glance.layout.ContentScale
+import androidx.glance.layout.height
+import androidx.compose.ui.unit.DpSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -23,6 +32,7 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
@@ -32,20 +42,29 @@ import androidx.glance.unit.ColorProvider
 
 class DerzhusWidget : GlanceAppWidget() {
 
+    // Два размера: компактный счётчик (2x2) и широкий вариант с целью (4x2)
+    override val sizeMode: SizeMode = SizeMode.Responsive(setOf(COMPACT, WIDE))
+
     override suspend fun provideGlance(
         context: Context,
         id: GlanceId
     ) {
-        val habit = Store.main(context)
+        val data = Store.data(context)
         val now = System.currentTimeMillis()
 
         provideContent {
             WidgetContent(
                 context = context,
-                habit = habit,
+                habit = data.mainHabit,
+                goal = data.mainGoal,
                 now = now
             )
         }
+    }
+
+    companion object {
+        val COMPACT = DpSize(110.dp, 110.dp)
+        val WIDE = DpSize(240.dp, 110.dp)
     }
 }
 
@@ -55,114 +74,109 @@ class DerzhusWidgetReceiver : GlanceAppWidgetReceiver() {
         DerzhusWidget()
 }
 
-private val WBg = ColorProvider(Color(0xFFFFFFFF))
-private val WAccent = ColorProvider(Color(0xFF168A43))
-private val WText = ColorProvider(Color(0xFF17231D))
-private val WMuted = ColorProvider(Color(0xFF55635B))
+// Текст лежит на тёмной полупрозрачной подложке поверх фото леса, поэтому светлый
+private val WScrim = ColorProvider(Color(0x990D2A1A))
+private val WOnPhoto = ColorProvider(Color(0xFFFFFFFF))
+private val WOnPhotoSoft = ColorProvider(Color(0xFFE3F1E6))
+private val WBar = ColorProvider(Color(0xFF6FD08C))
+private val WBarTrack = ColorProvider(Color(0x55FFFFFF))
+private val WCardBg = ColorProvider(Color(0xFF0D5039))
 
 @Composable
 private fun WidgetContent(
     context: Context,
     habit: Habit?,
+    goal: Goal?,
     now: Long
 ) {
-
-    val openAppIntent = Intent(
-        context,
-        MainActivity::class.java
-    ).apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP
+    val openAppIntent = Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
     }
+    val wide = LocalSize.current.width >= DerzhusWidget.WIDE.width
 
-    Column(
+    Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(WBg)
+            .background(WCardBg)
             .cornerRadius(24.dp)
-            .padding(14.dp)
-            .clickable(
-                actionStartActivity(
-                    intent = openAppIntent
-                )
-            ),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(actionStartActivity(intent = openAppIntent))
     ) {
-
-        if (habit == null) {
-
-            Text(
-                text = "Держусь",
-                style = TextStyle(
-                    color = WAccent,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            )
-
-            Text(
-                text = "Открой приложение и добавь первую цель",
-                style = TextStyle(
-                    color = WMuted,
-                    fontSize = 13.sp
-                )
-            )
-
-        } else {
-
-            val days = Calc.fullDays(habit, now)
-
-            Text(
-                text = habit.title,
-                style = TextStyle(
-                    color = WMuted,
-                    fontSize = 13.sp
-                )
-            )
-
-            Row(
-                verticalAlignment = Alignment.Bottom
-            ) {
-
-                Text(
-                    text = "$days",
-                    style = TextStyle(
-                        color = WAccent,
-                        fontSize = 44.sp,
-                        fontWeight = FontWeight.Bold
+        Image(
+            provider = ImageProvider(R.drawable.bg_widget_forest),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = GlanceModifier.fillMaxSize().cornerRadius(24.dp)
+        )
+        Box(
+            modifier = GlanceModifier.fillMaxSize().background(WScrim).cornerRadius(24.dp)
+        ) {}
+        Row(
+            modifier = GlanceModifier.fillMaxSize().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (habit == null) {
+                Column(modifier = GlanceModifier.defaultWeight()) {
+                    Text(
+                        text = "Новая жизнь",
+                        style = TextStyle(color = WOnPhoto, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     )
-                )
-
-                Spacer(
-                    modifier = GlanceModifier.width(6.dp)
-                )
-
-                Text(
-                    text = Calc.dayWord(days),
-                    style = TextStyle(
-                        color = WText,
-                        fontSize = 16.sp
+                    Text(
+                        text = "Открой приложение и добавь первую привычку",
+                        style = TextStyle(color = WOnPhotoSoft, fontSize = 13.sp)
                     )
-                )
-            }
-
-            val line = if (habit.pricePerUnit > 0) {
-                "Сэкономлено ${
-                    Money.rub(Calc.savedKop(habit, now))
-                }"
+                }
             } else {
-                "Обошёлся без ${
-                    Calc.count(Calc.avoided(habit, now))
-                } ${habit.unitLabel}"
+                val days = Calc.fullDays(habit, now)
+                Column(modifier = if (wide) GlanceModifier.width(110.dp) else GlanceModifier.defaultWeight()) {
+                    Text(
+                        text = "$days",
+                        style = TextStyle(color = WOnPhoto, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        text = "Дней на новом пути",
+                        style = TextStyle(color = WOnPhotoSoft, fontSize = 13.sp)
+                    )
+                }
+                if (wide) {
+                    Column(modifier = GlanceModifier.defaultWeight().padding(start = 8.dp)) {
+                        if (goal != null) {
+                            Text(
+                                text = goal.title,
+                                maxLines = 1,
+                                style = TextStyle(color = WOnPhoto, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            )
+                            Text(
+                                text = "${Money.rub(goal.savedKop)} из ${Money.rub(goal.costKop)}",
+                                maxLines = 1,
+                                style = TextStyle(color = WOnPhotoSoft, fontSize = 13.sp)
+                            )
+                            Spacer(modifier = GlanceModifier.height(6.dp))
+                            LinearProgressIndicator(
+                                progress = goal.progress,
+                                modifier = GlanceModifier.fillMaxWidth(),
+                                color = WBar,
+                                backgroundColor = WBarTrack
+                            )
+                        } else {
+                            val line = if (habit.pricePerUnit > 0) {
+                                "Сэкономлено ${Money.rub(Calc.savedKop(habit, now))}"
+                            } else {
+                                "Обошёлся без ${Calc.count(Calc.avoided(habit, now))} ${habit.unitLabel}"
+                            }
+                            Text(
+                                text = habit.title,
+                                maxLines = 1,
+                                style = TextStyle(color = WOnPhoto, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            )
+                            Text(
+                                text = line,
+                                maxLines = 1,
+                                style = TextStyle(color = WOnPhotoSoft, fontSize = 13.sp)
+                            )
+                        }
+                    }
+                }
             }
-
-            Text(
-                text = line,
-                style = TextStyle(
-                    color = WText,
-                    fontSize = 14.sp
-                )
-            )
         }
     }
 }
