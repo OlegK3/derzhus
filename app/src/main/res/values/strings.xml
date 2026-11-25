@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Новая жизнь</string>
-    <string name="widget_description">Сколько дней ты держишься и сколько сэкономил</string>
+    <string name="widget_description">Дней на новом пути, накопления и главная цель</string>
 </resources>
