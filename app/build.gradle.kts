@@ -12,13 +12,34 @@ android {
         applicationId = "ru.derzhus.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // В релизной сборке номер приходит из GitHub Actions (растёт с каждым запуском)
+        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
+        versionName = System.getenv("VERSION_NAME") ?: "1.0"
+    }
+
+    // Постоянный ключ подписи. Файл и пароли задаются переменными окружения (секреты GitHub),
+    // в репозитории их нет. Если ключа нет, сборка идёт с обычной отладочной подписью.
+    val keystorePath = System.getenv("KEYSTORE_PATH")
+    val hasKeystore = !keystorePath.isNullOrBlank() && file(keystorePath).exists()
+    if (hasKeystore) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystorePath!!)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasKeystore) signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            // Тот же ключ для debug: новые сборки ставятся поверх прежних без удаления
+            if (hasKeystore) signingConfig = signingConfigs.getByName("release")
         }
     }
 
