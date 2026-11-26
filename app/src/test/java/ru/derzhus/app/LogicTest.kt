@@ -149,4 +149,45 @@ class LogicTest {
         assertNull(StatsCalc.changePercent(10L, 0L))
         assertEquals(50, StatsCalc.changePercent(150L, 100L))
     }
+
+    @Test
+    fun moneySanitizeFiltersPasteAndLimits() {
+        assertEquals("", Money.sanitize(""))
+        assertEquals("50000", Money.sanitize("50 000"))
+        assertEquals("1500,5", Money.sanitize("1 500.5 ₽"))
+        assertEquals("0,5", Money.sanitize(",5"))
+        assertEquals("5", Money.sanitize("005"))
+        assertEquals("12,34", Money.sanitize("12,3456"))
+        assertEquals("123456789", Money.sanitize("1234567890123"))
+        assertEquals("1,23", Money.sanitize("1,2,3"))
+        assertEquals("", Money.sanitize("abc-"))
+        assertNull(Money.parse(Money.sanitize("")))
+        assertEquals(5_000_000L, Money.parse(Money.sanitize("50 000")))
+    }
+
+    @Test
+    fun nextTipNeverRepeatsPrevious() {
+        val r = kotlin.random.Random(1)
+        var prev = -1
+        repeat(500) {
+            val n = Praise.nextTip(prev, r)
+            assertTrue(n in Praise.tips.indices)
+            assertTrue(n != prev)
+            prev = n
+        }
+    }
+
+    @Test
+    fun settingsMigrationDefaultsAndRoundTrip() {
+        // Старые данные без новых полей: шаг ещё не пройден, записи нет
+        val old = JSONObject("""{"version":2,"habits":[],"goals":[],"settings":{"userName":"Оля"}}""")
+        val d = Json.fromJson(old)
+        assertEquals("", d.settings.distraction)
+        assertEquals(false, d.settings.distractionAsked)
+        // Сохранение и чтение возвращают то же
+        val saved = d.copy(settings = d.settings.copy(distraction = "Прогулка", distractionAsked = true))
+        val back = Json.fromJson(JSONObject(Json.toJson(saved).toString()))
+        assertEquals("Прогулка", back.settings.distraction)
+        assertEquals(true, back.settings.distractionAsked)
+    }
 }
